@@ -1,0 +1,318 @@
+{% extends "admin_dashboard.html" %}
+{% load static %}
+
+{% block content %}
+{% include 'message.html' %}
+
+<style>
+/* Form Layout */
+.form-layout {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-main-column {
+    flex: 2;
+    min-width: 0;
+}
+
+.form-sidebar-column {
+    flex: 1;
+    min-width: 280px;
+}
+
+/* Form Row */
+.form-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.form-col-half {
+    flex: 1;
+    min-width: 0;
+}
+
+.form-col-third {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Checkbox Label */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* Image Preview */
+.image-preview {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.image-preview img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #fde8ec;
+    box-shadow: 0 4px 16px rgba(199, 33, 47, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .form-layout {
+        flex-direction: column;
+    }
+    
+    .form-sidebar-column {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .form-row {
+        flex-direction: column;
+    }
+}
+</style>
+
+<div class="wrapper">
+    <h1 class="h1">{% if popup %}Edit{% else %}Create{% endif %} Developer Popup</h1>
+    <p class="small">{% if popup %}Update{% else %}Configure{% endif %} the developer information popup displayed on first page load</p>
+
+    <div class="nav-buttons">
+        <a href="{% url 'developer_popup_manage' %}" class="btn">← Back to Developer Popup</a>
+    </div>
+
+    <div class="panel">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-layout">
+                <!-- Main Column -->
+                <div class="form-main-column">
+                    <h3 style="margin-bottom: 16px; color: #c7212f;">Profile Information</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-col-half">
+                            <div class="form-group">
+                                <label for="{{ form.greeting_text.id_for_label }}">Greeting Text*</label>
+                                {{ form.greeting_text }}
+                                <div class="help-text">Text shown before your name (e.g., "Greetings! I'm")</div>
+                                {% if form.greeting_text.errors %}
+                                    <ul class="errorlist">
+                                        {% for error in form.greeting_text.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-col-half">
+                            <div class="form-group">
+                                <label for="{{ form.developer_name.id_for_label }}">Developer Name*</label>
+                                {{ form.developer_name }}
+                                <div class="help-text">Your full name</div>
+                                {% if form.developer_name.errors %}
+                                    <ul class="errorlist">
+                                        {% for error in form.developer_name.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.tagline.id_for_label }}">Tagline*</label>
+                        {{ form.tagline }}
+                        <div class="help-text">Brief description about yourself (max 500 characters)</div>
+                        {% if form.tagline.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.tagline.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+
+                    <h3 style="margin: 24px 0 16px; color: #c7212f;">Service Message</h3>
+
+                    <div class="form-group">
+                        <label for="{{ form.message_title.id_for_label }}">Message Title*</label>
+                        {{ form.message_title }}
+                        <div class="help-text">Bold heading for your service message</div>
+                        {% if form.message_title.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.message_title.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.message_body.id_for_label }}">Message Body*</label>
+                        {{ form.message_body }}
+                        <div class="help-text">Description of your services</div>
+                        {% if form.message_body.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.message_body.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+
+                    <h3 style="margin: 24px 0 16px; color: #c7212f;">Contact Information</h3>
+
+                    <div class="form-row">
+                        <div class="form-col-half">
+                            <div class="form-group">
+                                <label for="{{ form.email.id_for_label }}">Email Address*</label>
+                                {{ form.email }}
+                                <div class="help-text">Your contact email</div>
+                                {% if form.email.errors %}
+                                    <ul class="errorlist">
+                                        {% for error in form.email.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-col-half">
+                            <div class="form-group">
+                                <label for="{{ form.whatsapp_number.id_for_label }}">WhatsApp Number*</label>
+                                {{ form.whatsapp_number }}
+                                <div class="help-text">With country code (e.g., 917905817391)</div>
+                                {% if form.whatsapp_number.errors %}
+                                    <ul class="errorlist">
+                                        {% for error in form.whatsapp_number.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-col-half">
+                            <div class="form-group">
+                                <label for="{{ form.linkedin_url.id_for_label }}">LinkedIn URL</label>
+                                {{ form.linkedin_url }}
+                                <div class="help-text">Full LinkedIn profile URL (optional)</div>
+                                {% if form.linkedin_url.errors %}
+                                    <ul class="errorlist">
+                                        {% for error in form.linkedin_url.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-col-half">
+                            <div class="form-group">
+                                <label for="{{ form.linkedin_display_text.id_for_label }}">LinkedIn Display Text*</label>
+                                {{ form.linkedin_display_text }}
+                                <div class="help-text">Text shown for LinkedIn link</div>
+                                {% if form.linkedin_display_text.errors %}
+                                    <ul class="errorlist">
+                                        {% for error in form.linkedin_display_text.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.footer_message.id_for_label }}">Footer Message*</label>
+                        {{ form.footer_message }}
+                        <div class="help-text">Closing message at bottom of popup</div>
+                        {% if form.footer_message.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.footer_message.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Sidebar Column -->
+                <div class="form-sidebar-column">
+                    <h3 style="margin-bottom: 16px; color: #c7212f;">Display Settings</h3>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.profile_image.id_for_label }}">Profile Image</label>
+                        {{ form.profile_image }}
+                        <div class="help-text">Recommended: 300x300px, max 1MB</div>
+                        {% if form.profile_image.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.profile_image.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if popup.profile_image %}
+                        <div class="image-preview">
+                            <img src="{{ popup.profile_image.url }}" alt="Current Image">
+                            <p style="margin-top: 8px; font-size: 0.85rem; color: #6b7280;">Current Image</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.delay_seconds.id_for_label }}">Delay (Seconds)*</label>
+                        {{ form.delay_seconds }}
+                        <div class="help-text">Time before popup appears (0-30 seconds)</div>
+                        {% if form.delay_seconds.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.delay_seconds.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            {{ form.show_once_per_session }}
+                            <span>Show Once Per Session</span>
+                        </label>
+                        <div class="help-text">Display popup only once during browser session</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            {{ form.is_active }}
+                            <span>Active</span>
+                        </label>
+                        <div class="help-text">Enable/disable popup display on website</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">
+                    {% if popup %}Update{% else %}Create{% endif %} Popup
+                </button>
+                <a href="{% url 'developer_popup_manage' %}" class="btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

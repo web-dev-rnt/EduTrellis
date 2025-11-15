@@ -1,0 +1,1093 @@
+{% comment %} base/navbar.html {% endcomment %}
+{% load static %}
+
+<style>
+    /* ========== BASE STYLES ========== */
+    body {
+        font-family: 'Montserrat', Arial, sans-serif;
+        background: #fff;
+        margin: 0;
+        padding: 0;
+        padding-top: 70px;
+    }
+
+    /* ========== FIXED NAVBAR ========== */
+    .main-navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0px 30px;
+        width: 100%;
+        box-sizing: border-box;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-bottom: 2px solid #edeaea;
+        min-height: 70px;
+        gap: 15px;
+        transition: box-shadow 0.3s ease;
+    }
+
+    .main-navbar.scrolled {
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* ========== LOGO STYLES ========== */
+    .navbar-logo-wrapper {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .navbar-logo-wrapper img {
+        height: 58px;
+        width: auto;
+        transition: transform 0.3s ease;
+    }
+
+    .navbar-logo-wrapper:hover img {
+        transform: scale(1.05);
+    }
+
+    /* ========== SEARCH BAR STYLES ========== */
+    .navbar-search-box {
+        position: relative;
+        flex: 1 1 450px;
+        max-width: 550px;
+        min-width: 300px;
+        margin: 0 0 0 15px;
+    }
+
+    .navbar-search-box input {
+        width: 100%;
+        padding: 10px 45px;
+        border: 1.5px solid #e5e5e5;
+        border-radius: 25px;
+        font-size: 14px;
+        background: #f8f8f8;
+        transition: all 0.3s ease;
+        box-sizing: border-box;
+    }
+
+    .navbar-search-box input:focus {
+        outline: none;
+        border-color: #c7212f;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(199, 33, 47, 0.1);
+    }
+
+    .navbar-search-box i {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+        font-size: 18px;
+    }
+
+    /* ========== NAV ACTIONS CONTAINER ========== */
+    .navbar-actions-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    /* ========== COMMON BUTTON STYLES ========== */
+    .navbar-link-btn {
+        padding: 9px 18px;
+        background: transparent;
+        border: 1px solid #e5e5e5;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        font-family: inherit;
+    }
+
+    .navbar-link-btn:hover {
+        background: #f8f8f8;
+        border-color: #c7212f;
+        color: #c7212f;
+    }
+
+    /* ========== LOGIN & SIGNUP BUTTONS ========== */
+    .navbar-login-btn {
+        padding: 9px 18px;
+        background: transparent;
+        color: #333;
+        text-decoration: none;
+        border: 1px solid #e5e5e5;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+
+    .navbar-login-btn:hover {
+        background: #f8f8f8;
+        color: #c7212f;
+        border-color: #c7212f;
+    }
+
+    .navbar-signup-btn {
+        padding: 9px 18px;
+        background: #c7212f;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(199, 33, 47, 0.2);
+    }
+
+    .navbar-signup-btn:hover {
+        background: #a01825;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(199, 33, 47, 0.3);
+    }
+
+    /* ========== DROPDOWN STYLES ========== */
+    .navbar-dropdown {
+        position: relative;
+    }
+
+    .navbar-dropdown .fa-caret-down {
+        margin-left: 5px;
+    }
+
+    .navbar-dropdown-content {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        background: white;
+        min-width: 280px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border-radius: 8px;
+        padding: 8px 0;
+        z-index: 1000;
+        display: none;
+        border: 1px solid #e5e5e5;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .navbar-dropdown:hover .navbar-dropdown-content {
+        display: block;
+    }
+
+    .navbar-dropdown-content a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: #333;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        font-size: 15px;
+        font-weight: 500;
+    }
+
+    .navbar-dropdown-content a:hover {
+        background: #fff5f6;
+        color: #c7212f;
+    }
+
+    /* Category icons */
+    .navbar-category-icon {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 16px;
+        background: #f5f7fa;
+        color: #667eea;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+
+    .navbar-dropdown-content a:hover .navbar-category-icon {
+        background: #c7212f;
+        color: white;
+        transform: scale(1.1);
+    }
+
+    .navbar-dropdown-empty {
+        padding: 20px;
+        text-align: center;
+        color: #999;
+        font-size: 14px;
+    }
+
+    /* User dropdown specifics */
+    .navbar-user-dropdown .navbar-dropdown-content {
+        min-width: 220px;
+        padding: 6px 0;
+    }
+
+    .navbar-user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 8px;
+        border: 1px solid #e5e5e5;
+    }
+
+    .navbar-user-profile-btn {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    /* ========== SEARCH SUGGESTIONS ========== */
+    .navbar-search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e5e5e5;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-height: 450px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        margin-top: -1px;
+    }
+
+    .navbar-search-suggestions.active {
+        display: block;
+    }
+
+    .navbar-suggestion-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .navbar-suggestion-item:hover {
+        background: #f9f9f9;
+    }
+
+    .navbar-suggestion-thumbnail {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+        background: #f0f0f0;
+    }
+
+    .navbar-suggestion-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .navbar-suggestion-type {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        display: inline-block;
+        margin-bottom: 4px;
+        font-weight: 500;
+        background: #e8f0fe;
+        color: #1967d2;
+    }
+
+    .navbar-suggestion-type.category { background: #fef3e8; color: #f57c00; }
+    .navbar-suggestion-type.live { background: #fef3e8; color: #f57c00; }
+    .navbar-suggestion-type.test { background: #e8f5e9; color: #2e7d32; }
+    .navbar-suggestion-type.elibrary { background: #f3e5f5; color: #7b1fa2; }
+
+    .navbar-suggestion-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        margin: 0 0 4px 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .navbar-suggestion-meta {
+        font-size: 12px;
+        color: #666;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .navbar-suggestion-price {
+        color: #c7212f;
+        font-weight: 600;
+    }
+
+    .navbar-no-suggestions,
+    .navbar-search-loading {
+        padding: 20px;
+        text-align: center;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .navbar-view-all-results {
+        padding: 12px 16px;
+        text-align: center;
+        border-top: 2px solid #e5e5e5;
+        background: #f9f9f9;
+        color: #c7212f;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .navbar-view-all-results:hover {
+        background: #f0f0f0;
+    }
+
+    /* ========== CONTACT PHONE STYLES ========== */
+    .navbar-phone-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        color: #212121;
+        transition: opacity 0.3s ease;
+        background: #f6f6f6;
+        border-radius: 20px;
+        padding: 7px 16px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .navbar-phone-link:hover {
+        opacity: 0.8;
+    }
+
+    .navbar-phone-link i {
+        font-size: 20px;
+        color: #25D366;
+    }
+
+    .navbar-phone-link i.fa-phone {
+        color: #007bff;
+    }
+
+    /* ========== MOBILE MENU ========== */
+    .navbar-mobile-toggle {
+        display: none;
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #333;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    .navbar-mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9998;
+    }
+
+    .navbar-mobile-menu {
+        display: none;
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        max-width: 85vw;
+        height: 100%;
+        background: white;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        transition: right 0.3s ease;
+        overflow-y: auto;
+    }
+
+    .navbar-mobile-menu.active {
+        right: 0;
+    }
+
+    .navbar-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #e5e5e5;
+    }
+
+    .navbar-mobile-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+    }
+
+    .navbar-mobile-items {
+        padding: 15px;
+    }
+
+    .navbar-mobile-items a,
+    .navbar-mobile-items button {
+        display: block;
+        padding: 12px;
+        margin-bottom: 10px;
+        text-decoration: none;
+        color: #333;
+        background: #f8f8f8;
+        border-radius: 8px;
+        text-align: left;
+        border: none;
+        width: 100%;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .navbar-mobile-items a:hover,
+    .navbar-mobile-items button:hover {
+        background: #f0f0f0;
+        color: #c7212f;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 1024px) {
+        .main-navbar {
+            padding: 10px 20px;
+        }
+
+        body {
+            padding-top: 70px;
+        }
+
+        .navbar-search-box {
+            max-width: 450px;
+            margin: 0 0 0 12px;
+        }
+
+        .navbar-phone-text {
+            display: none;
+        }
+
+        .navbar-logo-wrapper img {
+            height: 52px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-navbar {
+            padding: 10px 12px;
+            gap: 8px;
+        }
+
+        body {
+            padding-top: 60px;
+        }
+
+        /* Hide desktop items */
+        .navbar-dropdown, 
+        .navbar-link-btn:not(.navbar-user-profile-btn), 
+        .navbar-login-btn, 
+        .navbar-signup-btn {
+            display: none !important;
+        }
+
+        /* Show mobile menu */
+        .navbar-mobile-toggle {
+            display: block;
+        }
+
+        .navbar-mobile-overlay, 
+        .navbar-mobile-menu {
+            display: block;
+        }
+
+        .navbar-mobile-overlay {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .navbar-mobile-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Keep user avatar visible */
+        .navbar-user-dropdown {
+            display: block !important;
+        }
+
+        .navbar-user-profile-btn {
+            padding: 6px;
+            font-size: 0;
+            border: none;
+            min-width: 36px;
+        }
+
+        .navbar-user-avatar {
+            width: 32px;
+            height: 32px;
+            margin-right: 0;
+        }
+
+        .navbar-user-profile-btn .fa-caret-down {
+            display: none;
+        }
+
+        /* Adjust search */
+        .navbar-search-box {
+            flex: 1 1 auto;
+            margin: 0 6px;
+            max-width: none;
+            min-width: 0;
+        }
+
+        .navbar-search-box input {
+            font-size: 13px;
+            padding: 9px 35px;
+        }
+
+        .navbar-search-box i {
+            left: 12px;
+            font-size: 16px;
+        }
+
+        /* Simplify layout */
+        .navbar-actions-wrapper {
+            gap: 6px;
+        }
+
+        .navbar-logo-wrapper img {
+            height: 40px;
+        }
+
+        .navbar-phone-link {
+            padding: 8px;
+            min-width: 40px;
+            justify-content: center;
+        }
+
+        /* Fix user dropdown position */
+        .navbar-user-dropdown .navbar-dropdown-content {
+            right: 0;
+            left: auto;
+            min-width: 200px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .main-navbar {
+            padding: 8px 10px;
+            gap: 6px;
+            min-height: 60px;
+        }
+
+        body {
+            padding-top: 60px;
+        }
+
+        .navbar-logo-wrapper img {
+            height: 36px;
+        }
+
+        .navbar-search-box {
+            flex: 1 1 auto;
+            margin: 0 5px;
+            max-width: calc(100vw - 170px);
+        }
+
+        .navbar-search-box input {
+            font-size: 12px;
+            padding: 8px 30px;
+        }
+
+        .navbar-search-box i {
+            left: 10px;
+            font-size: 14px;
+        }
+
+        .navbar-mobile-menu {
+            width: 260px;
+        }
+
+        .navbar-user-profile-btn {
+            padding: 5px;
+            min-width: 32px;
+        }
+
+        .navbar-user-avatar {
+            width: 28px;
+            height: 28px;
+        }
+
+        .navbar-phone-link {
+            padding: 6px;
+            min-width: 36px;
+        }
+
+        .navbar-phone-link i {
+            font-size: 18px;
+        }
+
+        .navbar-mobile-toggle {
+            font-size: 20px;
+            padding: 4px;
+        }
+
+        /* Smaller search suggestions */
+        .navbar-search-suggestions {
+            max-height: 300px;
+        }
+
+        .navbar-suggestion-thumbnail {
+            width: 40px;
+            height: 40px;
+        }
+
+        .navbar-suggestion-item {
+            padding: 10px 12px;
+            gap: 10px;
+        }
+
+        .navbar-suggestion-name {
+            font-size: 13px;
+        }
+
+        .navbar-suggestion-meta {
+            font-size: 11px;
+        }
+    }
+
+    @media (max-width: 375px) {
+        .main-navbar {
+            padding: 8px 8px;
+            gap: 4px;
+        }
+
+        .navbar-logo-wrapper img {
+            height: 32px;
+        }
+
+        .navbar-search-box {
+            margin: 0 4px;
+            max-width: calc(100vw - 150px);
+        }
+
+        .navbar-search-box input {
+            font-size: 11px;
+            padding: 7px 28px;
+        }
+
+        .navbar-search-box i {
+            left: 8px;
+            font-size: 13px;
+        }
+
+        .navbar-phone-link {
+            padding: 5px;
+            min-width: 32px;
+        }
+
+        .navbar-phone-link i {
+            font-size: 16px;
+        }
+
+        .navbar-user-avatar {
+            width: 26px;
+            height: 26px;
+        }
+    }
+
+    /* Scrollbar styles */
+    .navbar-dropdown-content::-webkit-scrollbar,
+    .navbar-search-suggestions::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .navbar-dropdown-content::-webkit-scrollbar-thumb,
+    .navbar-search-suggestions::-webkit-scrollbar-thumb {
+        background: #c7c7c7;
+        border-radius: 3px;
+    }
+
+    .navbar-dropdown-content::-webkit-scrollbar-thumb:hover,
+    .navbar-search-suggestions::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+</style>
+
+<!-- Dynamic Navbar -->
+<div class="main-navbar">
+    <div class="navbar-logo-wrapper">
+        <a href="{% url 'home' %}">
+            {% if navbar_settings and navbar_settings.logo %}
+                <img src="{{ navbar_settings.logo.url }}" alt="Logo">
+            {% else %}
+                <img src="{% static 'img/mainlogo.png' %}" alt="Logo">
+            {% endif %}
+        </a>
+    </div>
+
+    <div class="navbar-search-box">
+        <i class="fa fa-search"></i>
+        <input 
+            type="text" 
+            id="navbarSearchInput"
+            placeholder="{% if navbar_settings %}{{ navbar_settings.search_placeholder }}{% else %}Search courses...{% endif %}"
+            autocomplete="off"
+        >
+        <div class="navbar-search-suggestions" id="navbarSearchSuggestions"></div>
+    </div>
+
+    <div class="navbar-actions-wrapper">
+        <!-- Desktop Navigation Items -->
+        <div class="navbar-dropdown">
+            <button class="navbar-link-btn">Explore Exams <span class="fa fa-caret-down"></span></button>
+            <div class="navbar-dropdown-content">
+                {% for category in navbar_categories %}
+                    <a href="{% url 'category_detail' category.slug %}">
+                        <div class="navbar-category-icon">
+                            <i class="fa fa-graduation-cap"></i>
+                        </div>
+                        {{ category.name }}
+                    </a>
+                {% empty %}
+                    <div class="navbar-dropdown-empty">
+                        <i class="fa fa-folder-open-o" style="font-size: 32px; color: #ddd; margin-bottom: 8px;"></i>
+                        <p>No categories available</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <button class="navbar-link-btn" id="openCouponModalBtn" type="button">Apply Coupon</button>
+        
+        {% if user.is_authenticated %}
+        <!-- Authenticated user menu -->
+        <div class="navbar-dropdown navbar-user-dropdown">
+            <button class="navbar-link-btn navbar-user-profile-btn">
+                {% if request.user.profile_image and request.user.profile_image.name %}
+                    <img src="{{ request.user.profile_image.url }}" class="navbar-user-avatar" alt="Profile">
+                {% else %}
+                    <img src="{% static 'img/default-avatar.png' %}" class="navbar-user-avatar" alt="Profile">
+                {% endif %}
+                Welcome, {{ user.first_name|default:"User" }}
+                <span class="fa fa-caret-down"></span>
+            </button>
+            <div class="navbar-dropdown-content user-menu">
+                <a href="{% url 'profile_edit' %}">
+                    <i class="fa fa-user"></i> Edit Profile
+                </a>
+                <a href="{% url 'my_purchases' %}">
+                    <i class="fa fa-shopping-bag"></i> My Purchases
+                </a>
+                <a href="#" id="viewCouponsBtn">
+                    <i class="fa fa-ticket"></i> My Coupons
+                </a>
+                {% if user.is_staff or user.is_superuser %}
+                    <a href="{% url 'admindashboard' %}">
+                        <i class="fa fa-dashboard"></i> Admin Dashboard
+                    </a>
+                {% endif %}
+                <a href="{% url 'logout_user' %}">
+                    <i class="fa fa-sign-out"></i> Log Out
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <!-- Anonymous: show Login / Sign Up -->
+        <a href="{% url 'login' %}" class="navbar-login-btn">Log In</a>
+        <button class="navbar-signup-btn" onclick="window.location.href='{% url 'signup' %}'">Sign Up</button>
+        {% endif %}
+
+        <!-- Dynamic Contact with Icon -->
+        {% if navbar_settings %}
+            <a href="{{ navbar_settings.get_contact_url }}" 
+               class="navbar-phone-link" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               title="{% if navbar_settings.contact_type == 'whatsapp' %}Chat on WhatsApp{% else %}Call us now{% endif %}">
+                <i class="{{ navbar_settings.get_contact_icon }}"></i>
+                <span class="navbar-phone-text">
+                    {{ navbar_settings.contact_number }}<br>
+                    <span style="font-size: 12px;">{{ navbar_settings.contact_hours }}</span>
+                </span>
+            </a>
+        {% else %}
+            <!-- Fallback contact -->
+            <a href="https://wa.me/8873733733?text=Hello%2C%20I%20would%20like%20to%20know%20more%20about%20your%20courses" 
+               class="navbar-phone-link" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               title="Chat on WhatsApp">
+                <i class="fab fa-whatsapp"></i>
+                <span class="navbar-phone-text">
+                    8873733733<br>
+                    <span style="font-size: 12px;">(10 AM to 8 PM)</span>
+                </span>
+            </a>
+        {% endif %}
+
+        <!-- Mobile Menu Toggle -->
+        <button class="navbar-mobile-toggle" id="navbarMobileToggle">
+            <i class="fa fa-bars"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Mobile Navigation Menu -->
+<div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
+<div class="navbar-mobile-menu" id="navbarMobileMenu">
+    <div class="navbar-mobile-header">
+        <span>Menu</span>
+        <button class="navbar-mobile-close" id="navbarMobileClose">
+            <i class="fa fa-times"></i>
+        </button>
+    </div>
+    <div class="navbar-mobile-items">
+        {% if user.is_authenticated %}
+            <a href="{% url 'profile_edit' %}">
+                <i class="fa fa-user"></i> Edit Profile
+            </a>
+            <a href="{% url 'my_purchases' %}">
+                <i class="fa fa-shopping-bag"></i> My Purchases
+            </a>
+            <button id="mobileViewCouponsBtn">
+                <i class="fa fa-ticket"></i> My Coupons
+            </button>
+            <button id="mobileApplyCouponBtn">
+                <i class="fa fa-tag"></i> Apply Coupon
+            </button>
+            {% if user.is_staff or user.is_superuser %}
+                <a href="{% url 'admindashboard' %}">
+                    <i class="fa fa-dashboard"></i> Admin Dashboard
+                </a>
+            {% endif %}
+            
+            <h4 style="margin: 20px 0 10px; padding: 0 12px; color: #666; font-size: 12px; text-transform: uppercase;">Categories</h4>
+            {% for category in navbar_categories %}
+                <a href="{% url 'category_detail' category.slug %}">
+                    <i class="fa fa-graduation-cap"></i> {{ category.name }}
+                </a>
+            {% endfor %}
+            
+            <a href="{% url 'logout_user' %}" style="margin-top: 20px; background: #ffe8e8; color: #c7212f;">
+                <i class="fa fa-sign-out"></i> Log Out
+            </a>
+        {% else %}
+            <a href="{% url 'login' %}">
+                <i class="fa fa-sign-in"></i> Log In
+            </a>
+            <a href="{% url 'signup' %}" style="background: #c7212f; color: white;">
+                <i class="fa fa-user-plus"></i> Sign Up
+            </a>
+            
+            <h4 style="margin: 20px 0 10px; padding: 0 12px; color: #666; font-size: 12px; text-transform: uppercase;">Explore Exams</h4>
+            {% for category in navbar_categories %}
+                <a href="{% url 'category_detail' category.slug %}">
+                    <i class="fa fa-graduation-cap"></i> {{ category.name }}
+                </a>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mobile menu functionality
+    const mobileMenuToggle = document.getElementById('navbarMobileToggle');
+    const mobileNavMenu = document.getElementById('navbarMobileMenu');
+    const mobileNavOverlay = document.getElementById('navbarMobileOverlay');
+    const mobileNavClose = document.getElementById('navbarMobileClose');
+    const mobileApplyCouponBtn = document.getElementById('mobileApplyCouponBtn');
+    const mobileViewCouponsBtn = document.getElementById('mobileViewCouponsBtn');
+
+    // Toggle mobile menu
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', function() {
+            mobileNavMenu.classList.add('active');
+            mobileNavOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+    }
+
+    // Close mobile menu
+    function closeMobileMenu() {
+        mobileNavMenu.classList.remove('active');
+        mobileNavOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    if (mobileNavClose) {
+        mobileNavClose.addEventListener('click', closeMobileMenu);
+    }
+
+    if (mobileNavOverlay) {
+        mobileNavOverlay.addEventListener('click', closeMobileMenu);
+    }
+
+    // Mobile coupon buttons
+    if (mobileApplyCouponBtn) {
+        mobileApplyCouponBtn.addEventListener('click', function() {
+            closeMobileMenu();
+            const mainCouponBtn = document.getElementById('openCouponModalBtn');
+            if (mainCouponBtn) mainCouponBtn.click();
+        });
+    }
+
+    if (mobileViewCouponsBtn) {
+        mobileViewCouponsBtn.addEventListener('click', function() {
+            closeMobileMenu();
+            const viewCouponsBtn = document.getElementById('viewCouponsBtn');
+            if (viewCouponsBtn) viewCouponsBtn.click();
+        });
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('navbarSearchInput');
+    const suggestionsDiv = document.getElementById('navbarSearchSuggestions');
+    let searchTimeout;
+    let currentRequest = null;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                suggestionsDiv.classList.remove('active');
+                return;
+            }
+            
+            suggestionsDiv.innerHTML = '<div class="navbar-search-loading"><i class="fa fa-spinner fa-spin"></i> Searching...</div>';
+            suggestionsDiv.classList.add('active');
+            
+            searchTimeout = setTimeout(() => {
+                fetchSuggestions(query);
+            }, 300);
+        });
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = this.value.trim();
+                if (query) {
+                    window.location.href = `/search/?q=${encodeURIComponent(query)}`;
+                }
+            }
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (searchInput && !searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.classList.remove('active');
+        }
+    });
+
+    function fetchSuggestions(query) {
+        if (currentRequest) {
+            currentRequest.abort();
+        }
+        
+        currentRequest = new XMLHttpRequest();
+        currentRequest.open('GET', `/api/search-suggestions/?q=${encodeURIComponent(query)}`, true);
+        
+        currentRequest.onload = function() {
+            if (this.status === 200) {
+                const data = JSON.parse(this.responseText);
+                displaySuggestions(data.suggestions, query);
+            }
+        };
+        
+        currentRequest.onerror = function() {
+            suggestionsDiv.innerHTML = '<div class="navbar-no-suggestions">Search failed. Please try again.</div>';
+        };
+        
+        currentRequest.send();
+    }
+
+    function displaySuggestions(suggestions, query) {
+        if (suggestions.length === 0) {
+            suggestionsDiv.innerHTML = '<div class="navbar-no-suggestions">No results found</div>';
+            return;
+        }
+        
+        let html = '';
+        
+        suggestions.forEach(item => {
+            const thumbnailUrl = item.thumbnail || '';
+            
+            let badgeClass = 'navbar-suggestion-type';
+            if (item.type === 'Category') badgeClass += ' category';
+            else if (item.type === 'Live Class') badgeClass += ' live';
+            else if (item.type === 'Test Series') badgeClass += ' test';
+            else if (item.type === 'E-Library') badgeClass += ' elibrary';
+            
+            let thumbnailHtml;
+            if (item.type === 'Category') {
+                thumbnailHtml = '<div class="navbar-suggestion-thumbnail" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><i class="fa fa-folder-open" style="font-size: 24px; color: white;"></i></div>';
+            } else if (thumbnailUrl) {
+                thumbnailHtml = `<img src="${thumbnailUrl}" alt="${item.name}" class="navbar-suggestion-thumbnail" onerror="this.style.display='none'; this.onerror=null;">`;
+            } else {
+                thumbnailHtml = '<div class="navbar-suggestion-thumbnail" style="display: flex; align-items: center; justify-content: center; background: #f0f0f0;"><i class="fa fa-file-text-o" style="font-size: 24px; color: #999;"></i></div>';
+            }
+            
+            html += `
+                <a href="${item.url}" class="navbar-suggestion-item">
+                    ${thumbnailHtml}
+                    <div class="navbar-suggestion-content">
+                        <span class="${badgeClass}">${item.type}</span>
+                        <p class="navbar-suggestion-name">${item.name}</p>
+                        <div class="navbar-suggestion-meta">
+                            ${item.price ? `<span class="navbar-suggestion-price">${item.price}</span><span>•</span>` : ''}
+                            <span>${item.category}</span>
+                        </div>
+                    </div>
+                </a>
+            `;
+        });
+        
+        html += `
+            <div class="navbar-view-all-results" onclick="window.location.href='/search/?q=${encodeURIComponent(query)}'">
+                View All Results (${suggestions.length}+) <i class="fa fa-arrow-right"></i>
+            </div>
+        `;
+        
+        suggestionsDiv.innerHTML = html;
+    }
+
+    // Sticky navbar shadow effect
+    window.addEventListener('scroll', function() {
+        const navbar = document.querySelector('.main-navbar');
+        if (navbar && window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+        } else if (navbar) {
+            navbar.classList.remove('scrolled');
+        }
+    });
+});
+</script>

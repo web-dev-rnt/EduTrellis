@@ -1,0 +1,515 @@
+{% load static %}
+<!-- Video Courses Section -->
+{% if video_courses %}
+<div class="course-section" id="video-courses-section">
+  <div class="section-header">
+    <h2 class="main-heading">Explore Our Video Courses</h2>
+    <p>Learn at your own pace with expert-led courses designed for your success</p>
+  </div>
+  <div class="scroll-row-outer">
+    <button class="slide-arrow2 left" onclick="smoothScrollCarousel('video-carousel', 'left')" aria-label="Previous">
+      <i class="fa fa-chevron-left"></i>
+    </button>
+    <button class="slide-arrow2 right" onclick="smoothScrollCarousel('video-carousel', 'right')" aria-label="Next">
+      <i class="fa fa-chevron-right"></i>
+    </button>
+
+    <div class="scroll-row" id="video-carousel">
+      {% for course in video_courses %}
+        <a href="{% url 'video_course_detail' pk=course.pk %}" 
+           class="course-card" 
+           style="text-decoration: none; color: inherit;">
+          
+          <div class="course-img-wrapper">
+            {% if course.thumbnail %}
+              <img src="{{ course.thumbnail.url }}" 
+                   alt="{{ course.name }}" 
+                   class="course-img-elem"
+                   onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22225%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22225%22/%3E%3Ctext fill=%22%23999%22 font-family=%22Arial%22 font-size=%2218%22 text-anchor=%22middle%22 x=%22200%22 y=%22120%22%3ENo Image Available%3C/text%3E%3C/svg%3E';">
+            {% else %}
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='225'%3E%3Crect fill='%23f0f0f0' width='400' height='225'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' text-anchor='middle' x='200' y='120'%3ENo Image Available%3C/text%3E%3C/svg%3E" 
+                   alt="{{ course.name }}" 
+                   class="course-img-elem">
+            {% endif %}
+            
+            <!-- Course Badge: Purchased / Paid / Free -->
+            {% if course.is_purchased %}
+              <div class="premium-badge-overlay">
+                <span class="badge-purchased">
+                  <i class="fa fa-check-circle"></i> Purchased
+                </span>
+              </div>
+            {% elif not course.is_free %}
+              <div class="premium-badge-overlay">
+                <span class="badge-lock">
+                  <i class="fa fa-lock"></i> Paid
+                </span>
+              </div>
+            {% else %}
+              <div class="premium-badge-overlay">
+                <span class="badge-free">
+                  <i class="fa fa-unlock"></i> Free
+                </span>
+              </div>
+            {% endif %}
+          </div>
+          
+          <div class="course-body">
+            <!-- Course Title -->
+            <div class="course-title">{{ course.name }}</div>
+            
+            <!-- Course Category -->
+            {% if course.category %}
+              <div class="course-category">
+                <i class="fa fa-folder-open"></i> {{ course.category.name }}
+              </div>
+            {% endif %}
+            
+            <!-- Instructor Info -->
+            <div class="course-instructor-info">
+              <div class="instructor-name">{{ course.instructor_name|default:"Expert Instructor" }}</div>
+              <div class="instructor-headline">{{ course.instructor_headline|truncatewords:4 }}</div>
+            </div>
+
+            <!-- Course Description -->
+            {% if course.description %}
+              <div class="course-description">
+                {{ course.description|truncatewords:15 }}
+              </div>
+            {% endif %}
+
+            <!-- Course Meta Info -->
+            <div class="course-meta-info">
+              <div class="meta-item">
+                <i class="fa fa-clock"></i>
+                <span>{{ course.total_hours }} hrs</span>
+              </div>
+              <div class="meta-item">
+                <i class="fa fa-video"></i>
+                <span>{{ course.videos.count }} videos</span>
+              </div>
+            </div>
+
+            <!-- Rating -->
+            <div class="course-rating">
+              <div class="stars">
+                <span class="star">★</span> 
+                <span class="rating-value">{{ course.rating|default:"4.5" }}</span>
+              </div>
+              <span class="rating-count">({{ course.rating_count|default:"0" }})</span>
+            </div>
+            
+            <!-- Pricing -->
+            <div class="course-pricing">
+              {% if course.is_purchased %}
+                <span class="purchased-text">
+                  <i class="fa fa-check-circle"></i> Already Enrolled
+                </span>
+              {% elif course.is_free %}
+                <span class="rupee-free">FREE</span>
+              {% else %}
+                <span class="rupee">₹</span><span class="price-amount">{{ course.selling_price_display }}</span>
+                {% if course.original_price != course.selling_price %}
+                  <span class="old-price">₹{{ course.original_price_display }}</span>
+                {% endif %}
+              {% endif %}
+            </div>
+            
+            <!-- Course Labels -->
+            <div class="course-labels">
+              {% if course.is_purchased %}
+                <span class="badge badge-enrolled">
+                  <i class="fa fa-graduation-cap"></i> Enrolled
+                </span>
+              {% endif %}
+              {% if course.is_bestseller %}
+                <span class="badge badge-bestseller">
+                  <i class="fa fa-fire"></i> Bestseller
+                </span>
+              {% endif %}
+              {% if course.is_featured %}
+                <span class="badge badge-featured">
+                  <i class="fa fa-star"></i> Featured
+                </span>
+              {% endif %}
+              {% if course.is_free and not course.is_purchased %}
+                <span class="badge badge-free-label">
+                  <i class="fa fa-gift"></i> Free
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<style>
+  .course-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .course-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(199, 33, 47, 0.15);
+  }
+
+  /* Updated image wrapper and element styles */
+  .course-img-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f0f0f0;
+  }
+
+  .course-img-elem {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  .premium-badge-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 8px;
+    pointer-events: none;
+  }
+
+  .badge-lock {
+    background: rgba(199, 33, 47, 0.9);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
+  .badge-free {
+    background: rgba(40, 167, 69, 0.9);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
+  .badge-purchased {
+    background: rgba(0, 123, 255, 0.95);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    pointer-events: auto;
+  }
+
+  .course-body {
+    padding: 14px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .course-title {
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.3;
+    color: #162033;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .course-category {
+    font-size: 11px;
+    color: #c7212f;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .course-category i {
+    margin-right: 3px;
+  }
+
+  .course-instructor-info {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 8px;
+  }
+
+  .instructor-name {
+    font-size: 12px;
+    color: #162033;
+    font-weight: 600;
+  }
+
+  .instructor-headline {
+    font-size: 11px;
+    color: #707793;
+    line-height: 1.2;
+  }
+
+  .course-description {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .course-meta-info {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: #707793;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 6px;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .meta-item i {
+    font-size: 11px;
+    color: #c7212f;
+  }
+
+  .course-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .stars {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .star {
+    color: #ffc107;
+    font-size: 14px;
+  }
+
+  .rating-value {
+    color: #162033;
+    font-weight: 600;
+  }
+
+  .rating-count {
+    color: #707793;
+    opacity: 0.8;
+  }
+
+  .course-pricing {
+    font-weight: 700;
+    font-size: 16px;
+    color: #162033;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 8px;
+  }
+
+  .rupee {
+    font-size: 13px;
+  }
+
+  .price-amount {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .rupee-free {
+    font-size: 16px;
+    font-weight: 700;
+    color: #28a745;
+  }
+
+  .purchased-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .purchased-text i {
+    font-size: 16px;
+  }
+
+  .old-price {
+    text-decoration: line-through;
+    color: #aaa;
+    font-size: 12px;
+    margin-left: 6px;
+    font-weight: 600;
+  }
+
+  .course-labels {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .badge {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .badge-enrolled {
+    background: #007bff;
+    color: #fff;
+  }
+
+  .badge-bestseller {
+    background: #ffc107;
+    color: #000;
+  }
+
+  .badge-featured {
+    background: #17a2b8;
+    color: #fff;
+  }
+
+  .badge-free-label {
+    background: #28a745;
+    color: #fff;
+  }
+
+  .badge i {
+    font-size: 9px;
+  }
+
+  /* Responsive adjustments for tablets */
+  @media (max-width: 1024px) {
+    .section-header .main-heading {
+      font-size: 10px;
+    }
+    
+    .section-header p {
+      font-size: 9px;
+    }
+    
+    .slide-arrow2 {
+      display: none !important;
+    }
+  }
+
+  /* Responsive adjustments for mobile */
+  @media (max-width: 768px) {
+    .section-header .main-heading {
+      font-size: 23px;
+    }
+    
+    .section-header p {
+      font-size: 6px;
+    }
+
+    .course-body {
+      padding: 12px;
+      gap: 6px;
+    }
+
+    .course-title {
+      font-size: 14px;
+    }
+
+    .course-description {
+      -webkit-line-clamp: 1;
+    }
+
+    .course-meta-info {
+      font-size: 11px;
+    }
+
+    .badge-purchased,
+    .badge-lock,
+    .badge-free {
+      font-size: 11px;
+      padding: 5px 10px;
+    }
+  }
+</style>
+
+<!-- Image Error Handling Script -->
+<script>
+(function() {
+  'use strict';
+  
+  // Fallback SVG placeholder
+  const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='225'%3E%3Crect fill='%23f0f0f0' width='400' height='225'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' text-anchor='middle' x='200' y='120'%3ENo Image Available%3C/text%3E%3C/svg%3E";
+  
+  // Handle all course images on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const courseImages = document.querySelectorAll('.course-img-elem');
+    
+    courseImages.forEach(function(img) {
+      // Check if image failed to load
+      img.addEventListener('error', function() {
+        if (this.src !== fallbackImage) {
+          this.src = fallbackImage;
+          console.log('Image failed to load, using fallback');
+        }
+      });
+      
+      // Check if image is already broken (for cached images)
+      if (img.complete && img.naturalHeight === 0) {
+        img.src = fallbackImage;
+      }
+    });
+  });
+})();
+</script>
+{% endif %}

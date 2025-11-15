@@ -1,0 +1,1247 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ course.name }} - Video Course Detail</title>
+    
+    <!-- Video.js CSS -->
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Razorpay Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <style>
+        /* Modern CSS Variables */
+        :root {
+            --primary: #20c997;
+            --primary-dark: #17a689;
+            --primary-light: #5dedd5;
+            --accent: #6366f1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-dark: #0f172a;
+            --text-light: #64748b;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --border-subtle: #e2e8f0;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 8px 20px rgba(0, 0, 0, 0.12);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-dark);
+            line-height: 1.5;
+            font-size: 14px;
+            overflow-x: hidden;
+        }
+
+        /* Back Button - Compact */
+        .back-btn {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            color: var(--text-dark);
+            font-size: 16px;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Course Header - Compact */
+        .course-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 70px 20px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .course-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.4;
+        }
+
+        .course-header.purchased {
+            background: linear-gradient(135deg, var(--success) 0%, var(--primary) 100%);
+        }
+
+        .course-header.free {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 32px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .course-thumb {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .course-thumb:hover {
+            transform: translateY(-4px);
+        }
+
+        .course-thumb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--radius-lg);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+        }
+
+        .course-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .course-info {
+            color: white;
+        }
+
+        .course-info h1 {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+
+        .course-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            opacity: 0.95;
+        }
+
+        .course-meta span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-weight: 500;
+        }
+
+        .course-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .badge-bestseller {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #000;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        }
+
+        .badge-featured {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            color: white;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+        }
+
+        .badge-purchased,
+        .badge-free-label {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .price-section {
+            margin: 16px 0;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .price-main {
+            font-size: 36px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }
+
+        .price-old {
+            font-size: 18px;
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .access-expiry-alert {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 3px solid var(--warning);
+            font-size: 13px;
+        }
+
+        .access-expiry-alert i {
+            font-size: 18px;
+            color: var(--warning);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            color: var(--accent);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-primary:hover::before {
+            opacity: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Main Content Area */
+        .detail-container {
+            max-width: 1200px;
+            margin: -30px auto 50px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 24px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .content-panel,
+        .sidebar-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-subtle);
+            transition: all 0.3s ease;
+        }
+
+        .content-panel:hover,
+        .sidebar-panel:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 18px;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 3px;
+            height: 22px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 3px;
+        }
+
+        .learn-list {
+            list-style: none;
+            display: grid;
+            gap: 12px;
+        }
+
+        .learn-list li {
+            padding-left: 30px;
+            position: relative;
+            color: var(--text-dark);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .learn-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: 900;
+            font-size: 16px;
+            width: 22px;
+            height: 22px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Videos Section */
+        .videos-section {
+            margin-top: 24px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .video-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .video-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .video-item.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .video-item.locked:hover {
+            transform: translateY(-2px);
+            border-color: transparent;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-thumbnail::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.6) 100%);
+        }
+
+        .video-thumbnail::after {
+            content: '▶';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .video-item:hover .video-thumbnail::after {
+            background: var(--primary);
+            border-color: var(--primary);
+            transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        .video-item.locked .video-thumbnail::after {
+            content: '🔒';
+            font-size: 20px;
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .video-content {
+            padding: 14px;
+        }
+
+        .video-title {
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .video-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .video-badge {
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .video-badge:not(.locked) {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+        }
+
+        .video-badge.locked {
+            background: #cbd5e1;
+            color: #64748b;
+        }
+
+        /* Instructor Card */
+        .instructor-card {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            border-radius: var(--radius-md);
+            margin-top: 14px;
+        }
+
+        .instructor-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .instructor-info h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: var(--text-dark);
+        }
+
+        .instructor-info p {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .course-description {
+            color: var(--text-light);
+            line-height: 1.7;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .sidebar-panel + .sidebar-panel {
+            margin-top: 20px;
+        }
+
+        /* Video Modal */
+        .video-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .video-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 1000px;
+            background: #000;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            transform: scale(0.95);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .video-modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+            flex: 1;
+        }
+
+        .modal-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .quality-select {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quality-select:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .close-modal {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .video-js {
+            width: 100% !important;
+            height: 55vh !important;
+            max-height: 550px !important;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: white;
+            padding: 14px 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-xl);
+            max-width: 380px;
+            z-index: 3000;
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toast::before {
+            font-size: 18px;
+        }
+
+        .toast.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-left: 3px solid var(--danger);
+        }
+
+        .toast.error::before {
+            content: '❌';
+        }
+
+        .toast.success {
+            background: #f0fdf4;
+            color: #166534;
+            border-left: 3px solid var(--success);
+        }
+
+        .toast.success::before {
+            content: '✅';
+        }
+
+        .toast.info {
+            background: #eff6ff;
+            color: #1e40af;
+            border-left: 3px solid var(--accent);
+        }
+
+        .toast.info::before {
+            content: 'ℹ️';
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(500px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .header-container {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .detail-container {
+                grid-template-columns: 1fr;
+            }
+
+            .course-info h1 {
+                font-size: 24px;
+            }
+
+            .video-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .course-header {
+                padding: 60px 16px 30px;
+            }
+
+            .course-info h1 {
+                font-size: 22px;
+            }
+
+            .price-main {
+                font-size: 28px;
+            }
+
+            .detail-container {
+                padding: 0 16px;
+                margin-top: -20px;
+            }
+
+            .content-panel,
+            .sidebar-panel {
+                padding: 18px;
+            }
+
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-btns {
+                flex-direction: column;
+            }
+
+            .btn-primary {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .toast {
+                bottom: 16px;
+                right: 16px;
+                left: 16px;
+                max-width: none;
+            }
+
+            .panel-title {
+                font-size: 16px;
+            }
+
+            .learn-list li {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+{% include 'message.html' %}
+
+<!-- Back Button -->
+<a href="javascript:history.back()" class="back-btn">
+    <i class="fa fa-arrow-left"></i>
+</a>
+
+<!-- Course Header -->
+<section class="course-header {% if is_purchased %}purchased{% elif course.is_free %}free{% endif %}">
+    <div class="header-container">
+        <div class="course-thumb">
+            <img src="{% if course.thumbnail %}{{ course.thumbnail.url }}{% else %}{% static 'img/default-thumb.jpg' %}{% endif %}" 
+                 alt="{{ course.name }}">
+        </div>
+        <div class="course-info">
+            <h1>{{ course.name }}</h1>
+            <div class="course-meta">
+                <span><i class="fas fa-star"></i> {{ course.rating|default:"4.5" }} ({{ course.rating_count|default:"0" }})</span>
+                <span><i class="fas fa-user-circle"></i> {{ course.instructor_name }}</span>
+                <span><i class="fas fa-clock"></i> {{ course.total_hours }} hours</span>
+            </div>
+            <div class="course-badges">
+                {% if course.is_bestseller %}
+                    <span class="badge badge-bestseller">✨ Bestseller</span>
+                {% endif %}
+                {% if course.is_featured %}
+                    <span class="badge badge-featured">🔥 Featured</span>
+                {% endif %}
+                {% if is_purchased %}
+                    <span class="badge badge-purchased">
+                        <i class="fas fa-check-circle"></i> Purchased
+                    </span>
+                {% elif course.is_free %}
+                    <span class="badge badge-free-label">
+                        <i class="fas fa-unlock"></i> Free Course
+                    </span>
+                {% endif %}
+            </div>
+
+            <div class="price-section">
+                {% if is_purchased %}
+                    <div class="price-main" style="font-size: 22px;">
+                        <i class="fas fa-check-circle"></i> Access Granted
+                    </div>
+                {% elif course.is_free %}
+                    <div class="price-main">FREE</div>
+                {% else %}
+                    <div class="price-main">₹{{ course.selling_price_display }}</div>
+                    {% if course.original_price != course.selling_price %}
+                        <div class="price-old">₹{{ course.original_price_display }}</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            {% if is_purchased and access_expires_at %}
+                <div class="access-expiry-alert">
+                    <i class="fas fa-hourglass-half"></i>
+                    <div>
+                        <strong>Expires:</strong> {{ access_expires_at|date:"d M Y H:i" }}
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="action-btns">
+                {% if user.is_authenticated %}
+                    {% if is_purchased %}
+                        <button class="btn-primary" disabled>
+                            <i class="fas fa-check-circle"></i> Already Purchased
+                        </button>
+                    {% elif course.is_free %}
+                        <button class="btn-primary" id="enrollBtn" onclick="enrollFreeCourse()">
+                            <i class="fas fa-graduation-cap"></i> Enroll Free
+                        </button>
+                    {% else %}
+                        <button class="btn-primary" id="buyNowBtn" onclick="initiatePayment()">
+                            <i class="fas fa-shopping-cart"></i> Buy Now
+                        </button>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn-primary" style="text-decoration: none;">
+                        <i class="fas fa-sign-in-alt"></i> Login to {% if course.is_free %}Enroll{% else %}Purchase{% endif %}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<section class="detail-container">
+    <!-- Left Content -->
+    <div>
+        <div class="content-panel">
+            <h2 class="panel-title">What You'll Learn</h2>
+            {% if learn_points %}
+                <ul class="learn-list">
+                    {% for point in learn_points %}
+                        <li>{{ point.text }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <ul class="learn-list">
+                    <li>Master fundamentals of {{ course.name }}</li>
+                    <li>Apply practical skills through real-world projects</li>
+                    <li>Understand key concepts and advanced principles</li>
+                    <li>Build confidence and expertise in your knowledge</li>
+                </ul>
+            {% endif %}
+        </div>
+
+        <!-- Videos Section -->
+        <div class="videos-section">
+            <div class="content-panel">
+                <h2 class="panel-title">
+                    Course Videos
+                    <span style="color: var(--text-light); font-weight: 400; font-size: 14px; margin-left: auto;">
+                        {{ videos.count }} video{{ videos.count|pluralize }}
+                    </span>
+                </h2>
+                
+                {% if videos %}
+                    <div class="video-grid">
+                        {% for video in videos %}
+                            {% if is_purchased or video.is_preview %}
+                                <div class="video-item" onclick="openVideo('{{ video.file.url }}', '{{ video.title|escapejs }}', true)">
+                                    <div class="video-thumbnail" 
+                                         style="background-image:url('{% if video.thumb_image %}{{ video.thumb_image.url }}{% else %}{% static 'img/default-thumb.jpg' %}{% endif %}');">
+                                    </div>
+                                    <div class="video-content">
+                                        <div class="video-title">{{ forloop.counter }}. {{ video.title }}</div>
+                                        <div class="video-meta">
+                                            <span><i class="fas fa-clock"></i> {{ video.duration_display }}</span>
+                                            <span class="video-badge">{% if video.is_preview %}Preview{% else %}Premium{% endif %}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="video-item locked">
+                                    <div class="video-thumbnail" 
+                                         style="background-image:url('{% if video.thumb_image %}{{ video.thumb_image.url }}{% else %}{% static 'img/default-thumb.jpg' %}{% endif %}');">
+                                    </div>
+                                    <div class="video-content">
+                                        <div class="video-title">{{ forloop.counter }}. {{ video.title }}</div>
+                                        <div class="video-meta">
+                                            <span><i class="fas fa-lock"></i> {{ video.duration_display }}</span>
+                                            <span class="video-badge locked">Locked</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="color: var(--text-light); text-align: center; padding: 30px 0;">
+                        <i class="fas fa-video" style="font-size: 40px; opacity: 0.3; display: block; margin-bottom: 12px;"></i>
+                        No videos available yet.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <aside>
+        <div class="sidebar-panel">
+            <h2 class="panel-title">About This Course</h2>
+            <div class="course-description">
+                {% if course.description %}
+                    {{ course.description|linebreaks }}
+                {% else %}
+                    This comprehensive course guides you through {{ course.name }} with clear explanations, practical examples, and hands-on projects.
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="sidebar-panel">
+            <h2 class="panel-title">Instructor</h2>
+            <div class="instructor-card">
+                <img src="{% if course.instructor_avatar %}{{ course.instructor_avatar.url }}{% else %}https://ui-avatars.com/api/?name={{ course.instructor_name }}&size=112&background=667eea&color=fff&bold=true{% endif %}" 
+                     alt="{{ course.instructor_name }}" 
+                     class="instructor-avatar">
+                <div class="instructor-info">
+                    <h3>{{ course.instructor_name }}</h3>
+                    <p>{{ course.instructor_headline|default:"Expert Instructor & Mentor" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-panel">
+            <h2 class="panel-title">Course Includes</h2>
+            {% if includes %}
+                <ul class="learn-list">
+                    {% for include in includes %}
+                        <li>{{ include.label }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <ul class="learn-list">
+                    <li>{{ videos.count }} on-demand video{{ videos.count|pluralize }}</li>
+                    <li>{{ course.total_hours }} hours of premium content</li>
+                    <li>Downloadable resources & materials</li>
+                    <li>Certificate of completion</li>
+                    <li>Lifetime access to course content</li>
+                </ul>
+            {% endif %}
+        </div>
+    </aside>
+</section>
+
+<!-- Video Modal -->
+<div id="videoModal" class="video-modal" onclick="closeIfBackdrop(event)">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle" class="modal-title">Video Title</h3>
+            <div class="modal-controls">
+                <select id="qualitySelect" class="quality-select">
+                    <option value="auto">Auto Quality</option>
+                    <option value="1080">1080p HD</option>
+                    <option value="720">720p HD</option>
+                    <option value="480">480p SD</option>
+                </select>
+                <button class="close-modal" onclick="closeVideo()">&times;</button>
+            </div>
+        </div>
+        <video id="videoPlayer" class="video-js vjs-default-skin" controls preload="metadata"></video>
+    </div>
+</div>
+
+<!-- Video.js -->
+<script src="https://vjs.zencdn.net/8.10.0/video.js"></script>
+
+<script>
+    // ===== VIDEO PLAYER FUNCTIONS =====
+    let player;
+    const isPurchased = {{ is_purchased|yesno:'true,false' }};
+
+    function openVideo(url, title, isPreview) {
+        if (!isPreview && !isPurchased) {
+            showToast('This is premium content. Please purchase the course to access it.', 'error');
+            return;
+        }
+        
+        document.getElementById('modalTitle').textContent = title;
+        const modal = document.getElementById('videoModal');
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        if (!player) {
+            player = videojs('videoPlayer', {
+                controls: true,
+                playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+                responsive: true,
+                fluid: true,
+                preload: 'metadata'
+            });
+        }
+        
+        player.src({ src: url, type: 'video/mp4' });
+        player.load();
+        player.play();
+    }
+
+    function closeVideo() {
+        const modal = document.getElementById('videoModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+        if (player) {
+            player.pause();
+            player.currentTime(0);
+        }
+    }
+
+    function closeIfBackdrop(e) {
+        if (e.target.id === 'videoModal') {
+            closeVideo();
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeVideo();
+    });
+
+    // ===== FREE COURSE ENROLLMENT =====
+    function enrollFreeCourse() {
+        const enrollBtn = document.getElementById('enrollBtn');
+        enrollBtn.disabled = true;
+        enrollBtn.innerHTML = '<span class="spinner"></span> Enrolling...';
+        
+        fetch("{% url 'create_payment_order' course_type='video_course' course_id=course.id %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.is_free) {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else if (data.success) {
+                openRazorpayCheckout(data);
+            } else {
+                showToast('Error: ' + data.error, 'error');
+                resetEnrollButton();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Something went wrong. Please try again.', 'error');
+            resetEnrollButton();
+        });
+    }
+
+    // ===== RAZORPAY PAYMENT FUNCTIONS =====
+    function initiatePayment() {
+        const buyBtn = document.getElementById('buyNowBtn');
+        buyBtn.disabled = true;
+        buyBtn.innerHTML = '<span class="spinner"></span> Processing...';
+        
+        fetch("{% url 'create_payment_order' course_type='video_course' course_id=course.id %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                openRazorpayCheckout(data);
+            } else {
+                showToast('Error creating payment order: ' + data.error, 'error');
+                resetBuyButton();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Something went wrong. Please try again.', 'error');
+            resetBuyButton();
+        });
+    }
+
+    function openRazorpayCheckout(data) {
+        const options = {
+            key: data.razorpay_merchant_key,
+            amount: data.amount,
+            currency: data.currency,
+            name: "EduTrellis Platform",
+            description: data.course_name,
+            order_id: data.razorpay_order_id,
+            prefill: {
+                name: data.user_name,
+                email: data.user_email,
+                contact: data.user_phone || ''
+            },
+            theme: {
+                color: "#20c997"
+            },
+            handler: function(response) {
+                handlePaymentSuccess(response);
+            },
+            modal: {
+                ondismiss: function() {
+                    resetBuyButton();
+                    showToast('Payment cancelled by user.', 'info');
+                },
+                escape: false
+            }
+        };
+        
+        const rzp = new Razorpay(options);
+        rzp.open();
+    }
+
+    function handlePaymentSuccess(response) {
+        fetch("{% url 'payment_handler' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'razorpay_payment_id': response.razorpay_payment_id,
+                'razorpay_order_id': response.razorpay_order_id,
+                'razorpay_signature': response.razorpay_signature
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                showToast('Payment verification failed: ' + data.error, 'error');
+                resetBuyButton();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error processing payment response.', 'error');
+            resetBuyButton();
+        });
+    }
+
+    function resetBuyButton() {
+        const buyBtn = document.getElementById('buyNowBtn');
+        if (buyBtn) {
+            buyBtn.disabled = false;
+            buyBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> Buy Now';
+        }
+    }
+
+    function resetEnrollButton() {
+        const enrollBtn = document.getElementById('enrollBtn');
+        if (enrollBtn) {
+            enrollBtn.disabled = false;
+            enrollBtn.innerHTML = '<i class="fas fa-graduation-cap"></i> Enroll Free';
+        }
+    }
+
+    // ===== TOAST NOTIFICATION =====
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideIn 0.3s ease reverse';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+</script>
+
+</body>
+</html>

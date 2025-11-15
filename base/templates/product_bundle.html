@@ -1,0 +1,528 @@
+{% load static %}
+<!-- Product Bundles Section (Carousel Style) -->
+{% if product_bundles %}
+<div class="course-section bundle-section">
+  <div class="section-header">
+    <h2 class="main-heading">Product Bundles</h2>
+    <p>All-in-one bundles: E-Library + Live Classes + Video Course + Test Series</p>
+  </div>
+
+  <div class="scroll-row-outer">
+    <button class="slide-arrow2 left" onclick="smoothScrollCarousel('bundle-carousel', 'left')" aria-label="Previous">
+      <i class="fa fa-chevron-left"></i>
+    </button>
+    <button class="slide-arrow2 right" onclick="smoothScrollCarousel('bundle-carousel', 'right')" aria-label="Next">
+      <i class="fa fa-chevron-right"></i>
+    </button>
+
+    <div class="scroll-row" id="bundle-carousel">
+      {% for bundle in product_bundles %}
+        <a href="{% url 'product_bundle_detail' bundle.slug %}" 
+           class="course-card bundle-card" 
+           style="text-decoration: none; color: inherit;">
+          
+          <div class="bundle-img-wrapper">
+            {% if bundle.thumbnail %}
+              <img src="{{ bundle.thumbnail.url }}" 
+                   alt="{{ bundle.title }}" 
+                   class="bundle-img-elem"
+                   onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22225%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22225%22/%3E%3Ctext fill=%22%23999%22 font-family=%22Arial%22 font-size=%2218%22 text-anchor=%22middle%22 x=%22200%22 y=%22120%22%3ENo Bundle Image%3C/text%3E%3C/svg%3E';">
+            {% else %}
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='225'%3E%3Crect fill='%23f0f0f0' width='400' height='225'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' text-anchor='middle' x='200' y='120'%3ENo Bundle Image%3C/text%3E%3C/svg%3E" 
+                   alt="{{ bundle.title }}" 
+                   class="bundle-img-elem">
+            {% endif %}
+            
+            <!-- Bundle Badge: Purchased / Paid / Free -->
+            {% if bundle.is_purchased %}
+              <div class="premium-badge-overlay">
+                <span class="badge-purchased">
+                  <i class="fa fa-check-circle"></i> Purchased
+                </span>
+              </div>
+            {% elif bundle.bundle_price > 0 %}
+              <div class="premium-badge-overlay">
+                <span class="badge-lock">
+                  <i class="fa fa-lock"></i> Paid
+                </span>
+              </div>
+            {% else %}
+              <div class="premium-badge-overlay">
+                <span class="badge-free">
+                  <i class="fa fa-unlock"></i> Free
+                </span>
+              </div>
+            {% endif %}
+          </div>
+          
+          <div class="course-body">
+            <!-- Bundle Title -->
+            <div class="course-title">{{ bundle.title }}</div>
+            
+            <!-- Bundle Contents -->
+            <div class="course-category bundle-contents">
+              <i class="fa fa-th-large"></i> 
+              {% if bundle.elibrary_courses.count > 0 %}E-Library{% if bundle.live_classes.count > 0 or bundle.video_courses.count > 0 or bundle.test_series.count > 0 %} • {% endif %}{% endif %}
+              {% if bundle.live_classes.count > 0 %}Live Classes{% if bundle.video_courses.count > 0 or bundle.test_series.count > 0 %} • {% endif %}{% endif %}
+              {% if bundle.video_courses.count > 0 %}Video Course{% if bundle.test_series.count > 0 %} • {% endif %}{% endif %}
+              {% if bundle.test_series.count > 0 %}Test Series{% endif %}
+            </div>
+
+            <!-- Bundle Meta Info -->
+            <div class="course-meta-info">
+              <div class="meta-item">
+                <i class="fa fa-box"></i>
+                <span>{{ bundle.total_products }} Products</span>
+              </div>
+              <div class="meta-item">
+                <i class="fa fa-clock"></i>
+                <span>{{ bundle.validity_days }} days</span>
+              </div>
+            </div>
+
+            <!-- Bundle Description -->
+            {% if bundle.short_description %}
+              <div class="course-description">
+                {{ bundle.short_description|truncatewords:15 }}
+              </div>
+            {% endif %}
+
+            <!-- Bundle Details -->
+            <div class="bundle-details">
+              <div class="detail-item">
+                <i class="fa fa-book"></i>
+                <span>{{ bundle.elibrary_courses.count }} E-Library</span>
+              </div>
+              <div class="detail-item">
+                <i class="fa fa-video"></i>
+                <span>{{ bundle.live_classes.count }} Live Classes</span>
+              </div>
+              <div class="detail-item">
+                <i class="fa fa-play-circle"></i>
+                <span>{{ bundle.video_courses.count }} Video Courses</span>
+              </div>
+              <div class="detail-item">
+                <i class="fa fa-clipboard-list"></i>
+                <span>{{ bundle.test_series.count }} Test Series</span>
+              </div>
+            </div>
+
+            <!-- Rating (if applicable) -->
+            <div class="course-rating">
+              <div class="stars">
+                <span class="star">★</span> 
+                <span class="rating-value">{{ bundle.rating|default:"4.8" }}</span>
+              </div>
+              <span class="rating-count">({{ bundle.review_count|default:"Premium Bundle" }})</span>
+            </div>
+            
+            <!-- Pricing -->
+            <div class="course-pricing">
+              {% if bundle.is_purchased %}
+                <span class="purchased-text">
+                  <i class="fa fa-check-circle"></i> Already Enrolled
+                </span>
+              {% elif bundle.bundle_price == 0 %}
+                <span class="rupee-free">FREE</span>
+              {% else %}
+                <span class="rupee">₹</span><span class="price-amount">{{ bundle.price_display }}</span>
+                {% if bundle.original_price != bundle.bundle_price %}
+                  <span class="old-price">₹{{ bundle.original_price_display }}</span>
+                {% endif %}
+              {% endif %}
+            </div>
+            
+            <!-- Bundle Labels -->
+            <div class="course-labels">
+              {% if bundle.is_purchased %}
+                <span class="badge badge-enrolled">
+                  <i class="fa fa-graduation-cap"></i> Enrolled
+                </span>
+              {% endif %}
+              
+              {% if bundle.discount_percent > 0 and not bundle.is_purchased %}
+                <span class="badge badge-discount">
+                  <i class="fa fa-tag"></i> {{ bundle.discount_percent|floatformat:0 }}% OFF
+                </span>
+              {% endif %}
+              
+              <span class="badge badge-bundle">
+                <i class="fa fa-boxes"></i> Bundle
+              </span>
+              
+              {% if bundle.bundle_price == 0 and not bundle.is_purchased %}
+                <span class="badge badge-free-label">
+                  <i class="fa fa-gift"></i> Free
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Inherit all base styles from video courses */
+  .bundle-section .course-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .bundle-section .course-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(199, 33, 47, 0.15);
+  }
+
+  /* Updated image wrapper and element styles */
+  .bundle-img-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f0f0f0;
+  }
+
+  .bundle-img-elem {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  .bundle-section .premium-badge-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 8px;
+    pointer-events: none;
+  }
+
+  .bundle-section .badge-lock {
+    background: rgba(199, 33, 47, 0.9);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
+  .bundle-section .badge-free {
+    background: rgba(40, 167, 69, 0.9);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
+  .bundle-section .badge-purchased {
+    background: rgba(0, 123, 255, 0.95);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    pointer-events: auto;
+  }
+
+  .bundle-section .course-body {
+    padding: 14px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .bundle-section .course-title {
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.3;
+    color: #162033;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .bundle-section .course-category {
+    font-size: 11px;
+    color: #c7212f;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .bundle-section .course-category i {
+    margin-right: 3px;
+  }
+
+  .bundle-section .bundle-contents {
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bundle-section .course-description {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .bundle-section .course-meta-info {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: #707793;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 6px;
+  }
+
+  .bundle-section .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .bundle-section .meta-item i {
+    font-size: 11px;
+    color: #c7212f;
+  }
+
+  /* Bundle specific details */
+  .bundle-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 11px;
+    color: #707793;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 6px;
+  }
+
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .detail-item i {
+    font-size: 10px;
+    color: #c7212f;
+  }
+
+  .bundle-section .course-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .bundle-section .stars {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .bundle-section .star {
+    color: #ffc107;
+    font-size: 14px;
+  }
+
+  .bundle-section .rating-value {
+    color: #162033;
+    font-weight: 600;
+  }
+
+  .bundle-section .rating-count {
+    color: #707793;
+    opacity: 0.8;
+  }
+
+  .bundle-section .course-pricing {
+    font-weight: 700;
+    font-size: 16px;
+    color: #162033;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 8px;
+  }
+
+  .bundle-section .rupee {
+    font-size: 13px;
+  }
+
+  .bundle-section .price-amount {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .bundle-section .rupee-free {
+    font-size: 16px;
+    font-weight: 700;
+    color: #28a745;
+  }
+
+  .bundle-section .purchased-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .bundle-section .purchased-text i {
+    font-size: 16px;
+  }
+
+  .bundle-section .old-price {
+    text-decoration: line-through;
+    color: #aaa;
+    font-size: 12px;
+    margin-left: 6px;
+    font-weight: 600;
+  }
+
+  .bundle-section .course-labels {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .bundle-section .badge {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .bundle-section .badge-enrolled {
+    background: #007bff;
+    color: #fff;
+  }
+
+  .bundle-section .badge-discount {
+    background: #10b981;
+    color: #fff;
+  }
+
+  .bundle-section .badge-bundle {
+    background: #6366f1;
+    color: #fff;
+  }
+
+  .bundle-section .badge-free-label {
+    background: #28a745;
+    color: #fff;
+  }
+
+  .bundle-section .badge i {
+    font-size: 9px;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .bundle-section .course-body {
+      padding: 12px;
+      gap: 6px;
+    }
+
+    .bundle-section .course-title {
+      font-size: 14px;
+    }
+
+    .bundle-section .course-description {
+      -webkit-line-clamp: 1;
+    }
+
+    .bundle-section .course-meta-info {
+      font-size: 11px;
+    }
+
+    .bundle-section .badge-purchased,
+    .bundle-section .badge-lock,
+    .bundle-section .badge-free {
+      font-size: 11px;
+      padding: 5px 10px;
+    }
+
+    .bundle-details {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+</style>
+
+<!-- Image Error Handling Script for Bundles -->
+<script>
+(function() {
+  'use strict';
+  
+  // Fallback SVG placeholder for bundles
+  const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='225'%3E%3Crect fill='%23f0f0f0' width='400' height='225'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' text-anchor='middle' x='200' y='120'%3ENo Bundle Image%3C/text%3E%3C/svg%3E";
+  
+  // Handle all bundle images on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const bundleImages = document.querySelectorAll('.bundle-img-elem');
+    
+    bundleImages.forEach(function(img) {
+      // Check if image failed to load
+      img.addEventListener('error', function() {
+        if (this.src !== fallbackImage) {
+          this.src = fallbackImage;
+          console.log('Bundle image failed to load, using fallback');
+        }
+      });
+      
+      // Check if image is already broken (for cached images)
+      if (img.complete && img.naturalHeight === 0) {
+        img.src = fallbackImage;
+      }
+    });
+  });
+})();
+</script>
+{% endif %}

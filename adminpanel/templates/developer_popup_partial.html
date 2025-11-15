@@ -1,0 +1,116 @@
+{% load static %}
+
+{% if popup and show_popup %}
+<!-- Developer Info Popup -->
+<div class="dev-popup-overlay" id="devPopup">
+  <div class="dev-popup">
+    <button class="dev-popup-close-btn" id="closeDevPopup" aria-label="Close">
+      <i class="fa fa-times"></i>
+    </button>
+    
+    <div class="dev-popup-header">
+      <div class="dev-popup-profile">
+        {% if popup.profile_image %}
+          <img src="{{ popup.profile_image.url }}" alt="{{ popup.developer_name }}">
+        {% else %}
+          <i class="fas fa-user-circle"></i>
+        {% endif %}
+      </div>
+      <p class="dev-popup-greeting">{{ popup.greeting_text }}</p>
+      <h2 class="dev-popup-name">{{ popup.developer_name }}</h2>
+      <p class="dev-popup-tagline">{{ popup.tagline }}</p>
+    </div>
+    
+    <div class="dev-popup-body">
+      <div class="dev-popup-message">
+        <p><strong>{{ popup.message_title }}</strong></p>
+        <p>{{ popup.message_body }}</p>
+      </div>
+      
+      <div class="dev-contact-item">
+        <span class="dev-contact-label">Email:</span>
+        <span class="dev-contact-value">
+          <a href="mailto:{{ popup.email }}">{{ popup.email }}</a>
+        </span>
+      </div>
+      
+      <div class="dev-contact-item">
+        <span class="dev-contact-label">Whatsapp:</span>
+        <span class="dev-contact-value">
+          <a href="https://wa.me/{{ popup.whatsapp_number }}" target="_blank">+{{ popup.whatsapp_number }}</a>
+        </span>
+      </div>
+      
+      {% if popup.linkedin_url %}
+      <div class="dev-contact-item">
+        <span class="dev-contact-label">Linkedin:</span>
+        <span class="dev-contact-value">
+          <a href="{{ popup.linkedin_url }}" target="_blank" rel="noopener noreferrer">{{ popup.linkedin_display_text }}</a>
+        </span>
+      </div>
+      {% endif %}
+    </div>
+    
+    <div class="dev-popup-footer">
+      <p class="dev-popup-footer-text">{{ popup.footer_message }}</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Show developer popup based on settings
+document.addEventListener('DOMContentLoaded', function() {
+  const devPopup = document.getElementById('devPopup');
+  const closeBtn = document.getElementById('closeDevPopup');
+  
+  // Safety check - exit if elements don't exist
+  if (!devPopup || !closeBtn) {
+    console.log('Developer popup elements not found or popup not configured');
+    return;
+  }
+  
+  // Check session storage if configured
+  {% if popup.show_once_per_session %}
+  const popupShown = sessionStorage.getItem('devPopupShown');
+  if (popupShown) {
+    console.log('Developer popup already shown in this session');
+    return;
+  }
+  {% endif %}
+  
+  // Show popup after delay
+  setTimeout(() => {
+    devPopup.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    console.log('Developer popup displayed');
+  }, {{ popup.delay_seconds|default:1 }} * 1000);
+  
+  // Close popup function
+  function closePopup() {
+    devPopup.classList.remove('active');
+    document.body.style.overflow = '';
+    {% if popup.show_once_per_session %}
+    sessionStorage.setItem('devPopupShown', 'true');
+    {% endif %}
+    console.log('Developer popup closed');
+  }
+  
+  // Close on button click
+  closeBtn.addEventListener('click', closePopup);
+  
+  // Close on overlay click
+  devPopup.addEventListener('click', function(e) {
+    if (e.target === devPopup) {
+      closePopup();
+    }
+  });
+  
+  // Close on ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && devPopup.classList.contains('active')) {
+      closePopup();
+    }
+  });
+});
+</script>
+{% endif %}
