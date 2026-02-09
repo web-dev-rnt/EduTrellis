@@ -10,53 +10,54 @@
     </div>
   </div>
 {% include "message.html" %}
+  
   <!-- Statistics Cards -->
-  <section class="ad-kpis">
-    <div class="ad-kpi">
-      <div class="ad-kpi-ico"><i class="fas fa-users" style="color: #007bff;"></i></div>
+  <section class="admin-kpis">
+    <div class="admin-kpi">
+      <div class="admin-kpi-ico"><i class="fas fa-users" style="color: #007bff;"></i></div>
       <div>
-        <div class="ad-kpi-label">Total Users</div>
-        <div class="ad-kpi-value">{{ total_users }}</div>
-        <div class="ad-kpi-change">+{{ total_growth }}% this month</div>
+        <div class="admin-kpi-label">Total Users</div>
+        <div class="admin-kpi-value">{{ total_users }}</div>
+        <div class="admin-kpi-change">+{{ total_growth }}% this month</div>
       </div>
     </div>
-    <div class="ad-kpi">
-      <div class="ad-kpi-ico"><i class="fas fa-chart-line" style="color: #28a745;"></i></div>
+    <div class="admin-kpi">
+      <div class="admin-kpi-ico"><i class="fas fa-chart-line" style="color: #28a745;"></i></div>
       <div>
-        <div class="ad-kpi-label">This Month</div>
-        <div class="ad-kpi-value">{{ this_month_signups }}</div>
-        <div class="ad-kpi-change">{{ monthly_change }}% vs last month</div>
+        <div class="admin-kpi-label">This Month</div>
+        <div class="admin-kpi-value">{{ this_month_signups }}</div>
+        <div class="admin-kpi-change">{{ monthly_change }}% vs last month</div>
       </div>
     </div>
-    <div class="ad-kpi">
-      <div class="ad-kpi-ico"><i class="fas fa-user-tie" style="color: #ffc107;"></i></div>
+    <div class="admin-kpi">
+      <div class="admin-kpi-ico"><i class="fas fa-user-tie" style="color: #ffc107;"></i></div>
       <div>
-        <div class="ad-kpi-label">Staff Users</div>
-        <div class="ad-kpi-value">{{ staff_users }}</div>
-        <div class="ad-kpi-change">{{ staff_percentage }}% of total</div>
+        <div class="admin-kpi-label">Staff Users</div>
+        <div class="admin-kpi-value">{{ staff_users }}</div>
+        <div class="admin-kpi-change">{{ staff_percentage }}% of total</div>
       </div>
     </div>
-    <div class="ad-kpi">
-      <div class="ad-kpi-ico"><i class="fas fa-check-circle" style="color: #28a745;"></i></div>
+    <div class="admin-kpi">
+      <div class="admin-kpi-ico"><i class="fas fa-check-circle" style="color: #28a745;"></i></div>
       <div>
-        <div class="ad-kpi-label">Active Users</div>
-        <div class="ad-kpi-value">{{ active_users }}</div>
-        <div class="ad-kpi-change">{{ active_percentage }}% active</div>
+        <div class="admin-kpi-label">Active Users</div>
+        <div class="admin-kpi-value">{{ active_users }}</div>
+        <div class="admin-kpi-change">{{ active_percentage }}% active</div>
       </div>
     </div>
-    <div class="ad-kpi">
-      <div class="ad-kpi-ico"><i class="fas fa-times-circle" style="color: #dc3545;"></i></div>
+    <div class="admin-kpi">
+      <div class="admin-kpi-ico"><i class="fas fa-times-circle" style="color: #dc3545;"></i></div>
       <div>
-        <div class="ad-kpi-label">Inactive Users</div>
-        <div class="ad-kpi-value">{{ inactive_users }}</div>
-        <div class="ad-kpi-change">{{ inactive_percentage }}% inactive</div>
+        <div class="admin-kpi-label">Inactive Users</div>
+        <div class="admin-kpi-value">{{ inactive_users }}</div>
+        <div class="admin-kpi-change">{{ inactive_percentage }}% inactive</div>
       </div>
     </div>
   </section>
 
   <!-- User Details Table -->
-  <section class="ad-card">
-    <div class="ad-card-hd">
+  <section class="admin-card">
+    <div class="admin-card-hd">
       <h3><i class="fas fa-users" style="color: #007bff;"></i> User Management</h3>
     </div>
     
@@ -65,25 +66,25 @@
       <form method="GET" class="filter-form">
         <div class="filter-row">
           <div class="filter-group">
-            <input class="ad-filter-input" type="text" name="search" 
+            <input class="admin-filter-input" type="text" name="search" 
                    placeholder="Search users…" value="{{ request.GET.search }}">
           </div>
           <div class="filter-group">
-            <select class="ad-filter-select" name="status" onchange="this.form.submit()">
+            <select class="admin-filter-select" name="status" onchange="this.form.submit()">
               <option value="">All Status</option>
               <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
               <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
             </select>
           </div>
           <div class="filter-group">
-            <select class="ad-filter-select" name="user_type" onchange="this.form.submit()">
+            <select class="admin-filter-select" name="user_type" onchange="this.form.submit()">
               <option value="">All Types</option>
               <option value="staff" {% if request.GET.user_type == 'staff' %}selected{% endif %}>Staff</option>
               <option value="superuser" {% if request.GET.user_type == 'superuser' %}selected{% endif %}>Superuser</option>
             </select>
           </div>
           <div class="filter-group">
-            <select class="ad-filter-select" name="date_range" onchange="this.form.submit()">
+            <select class="admin-filter-select" name="date_range" onchange="this.form.submit()">
               <option value="">All Time</option>
               <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>Today</option>
               <option value="week" {% if request.GET.date_range == 'week' %}selected{% endif %}>This Week</option>
@@ -92,16 +93,16 @@
             </select>
           </div>
           <div class="filter-group">
-            <button type="submit" class="ad-btn ad-btn-primary"><i class="fas fa-search"></i> Search</button>
-            <a href="{% url 'signupdashboard' %}" class="ad-btn ad-btn-secondary"><i class="fas fa-sync"></i> Clear</a>
+            <button type="submit" class="admin-btn admin-btn-primary"><i class="fas fa-search"></i> Search</button>
+            <a href="{% url 'signupdashboard' %}" class="admin-btn admin-btn-secondary"><i class="fas fa-sync"></i> Clear</a>
           </div>
         </div>
       </form>
     </div>
 
-    <div class="ad-card-bd">
+    <div class="admin-card-bd">
       <div class="table-wrapper">
-        <table class="ad-table">
+        <table class="admin-table">
           <thead>
             <tr>
               <th>
@@ -292,7 +293,7 @@ function showToast(message) {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: var(--ad-success);
+    background: var(--admin-success);
     color: white;
     padding: 12px 20px;
     border-radius: 6px;

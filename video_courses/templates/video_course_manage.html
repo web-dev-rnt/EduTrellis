@@ -10,7 +10,6 @@
             </div>
         </div>
 
-
         <!-- Stats Cards -->
         <div class="analytics-grid">
             <div class="analytics-card">
@@ -43,17 +42,16 @@
             </div>
         </div>
 
-
         <!-- Header section with title, search and action button -->
         <div class="page-header">
             <div class="header-content">
                 <h1>All Courses</h1>
             </div>
             <div class="header-actions">
-                <div class="ad-filters">
+                <div class="admin-filters">
                     <input 
                         type="text" 
-                        class="ad-filter-input" 
+                        class="admin-filter-input" 
                         placeholder="Search courses by name…"
                         id="courseSearch"
                     >
@@ -65,11 +63,10 @@
             </div>
         </div>
 
-
         <!-- Table panel -->
         <div class="panel">
             <div class="table-wrapper">
-                <table class="ad-table" id="coursesTable">
+                <table class="admin-table" id="coursesTable">
                     <thead>
                         <tr>
                             <th>Thumbnail</th>
@@ -184,7 +181,6 @@
     </div>
 </main>
 
-
 <script>
 // Enhanced notification system
 function showNotification(message, type = 'success', duration = 4000) {
@@ -253,7 +249,6 @@ function showNotification(message, type = 'success', duration = 4000) {
     }, duration);
 }
 
-
 // Add CSS animations
 const style = document.createElement('style');
 style.textContent = `
@@ -278,7 +273,6 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-
 
 // Get CSRF token function
 function getCSRFToken() {
@@ -309,7 +303,6 @@ function getCSRFToken() {
     
     return token;
 }
-
 
 // Fixed delete course function
 function deleteCourse(courseId, courseName) {
@@ -407,7 +400,6 @@ function deleteCourse(courseId, courseName) {
     }
 }
 
-
 // Course search functionality
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('courseSearch');
@@ -438,6 +430,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 
 {% endblock %}

@@ -1,3 +1,5 @@
+
+
 // Banner javascript 
 window.addEventListener('DOMContentLoaded', function() {
   const bannerSlides = document.querySelectorAll('.banner-slide');

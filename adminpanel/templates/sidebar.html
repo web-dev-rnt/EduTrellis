@@ -1,173 +1,163 @@
 <!-- Sidebar -->
-<aside class="ad-sidebar">
-  <div class="ad-sb-head">
-    <div class="ad-sb-title">Admin</div>
-    <a href="{% url 'home' %}" class="ad-sb-title">Home</a>
+<aside class="admin-sidebar">
+  <div class="admin-sb-head">
+    <div class="admin-sb-title">Admin</div>
+    <a href="{% url 'home' %}" class="admin-sb-title">Home</a>
   </div>
-  <nav class="ad-nav">
-
-
+  <nav class="admin-nav">
 
     <!-- Dashboard -->
-    <a href="{% url 'admindashboard' %}" class="{% if request.resolver_match.url_name == 'admindashboard' %}ad-active{% endif %}">
-      <span class="ad-ico"><i class="fas fa-home" style="color: #007bff;"></i></span><span>Dashboard</span>
+    <a href="{% url 'admindashboard' %}" class="{% if request.resolver_match.url_name == 'admindashboard' %}admin-active{% endif %}">
+      <span class="admin-ico"><i class="fas fa-home" style="color: #007bff;"></i></span><span>Dashboard</span>
     </a>
-
-
 
     <!-- User Management -->
-    <a href="#" class="ad-dropdown {% if request.resolver_match.url_name in 'signupdashboard,admin_add_user,edit_user,delete_user,toggle_user_status,reset_user_password' %}ad-open{% endif %}">
-      <span class="ad-ico"><i class="fas fa-users" style="color: #28a745;"></i></span><span>User Management</span>
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'signupdashboard,admin_add_user,edit_user,delete_user,toggle_user_status,reset_user_password' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-users" style="color: #28a745;"></i></span><span>User Management</span>
     </a>
-    <div class="ad-submenu" {% if request.resolver_match.url_name in 'signupdashboard,admin_add_user,edit_user,delete_user,toggle_user_status,reset_user_password' %}style="display:flex;"{% endif %}>
-      <a href="{% url 'signupdashboard' %}" class="{% if request.resolver_match.url_name in 'signupdashboard,edit_user,delete_user,toggle_user_status,reset_user_password' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-user-plus" style="color: #17a2b8;"></i></span>Signup
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'signupdashboard,admin_add_user,edit_user,delete_user,toggle_user_status,reset_user_password' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'signupdashboard' %}" class="{% if request.resolver_match.url_name in 'signupdashboard,edit_user,delete_user,toggle_user_status,reset_user_password' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-user-plus" style="color: #17a2b8;"></i></span>Signup
       </a>
-      <a href="{% url 'admin_add_user' %}" class="{% if request.resolver_match.url_name == 'admin_add_user' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-plus" style="color: #ffc107;"></i></span>Add User
+      <a href="{% url 'admin_add_user' %}" class="{% if request.resolver_match.url_name == 'admin_add_user' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-plus" style="color: #ffc107;"></i></span>Add User
       </a>
     </div>
-
-
 
     <!-- Live Class Course -->
-    <a href="#" class="ad-dropdown {% if request.resolver_match.url_name in 'liveclass,live_class_course_create,live_class_course_edit,live_class_course_delete,live_class_course_toggle_status,live_class_course_classes,add_scheduled_class,live_class_schedule_edit,live_class_schedule_delete' %}ad-open{% endif %}">
-      <span class="ad-ico"><i class="fas fa-chalkboard-teacher" style="color: #e83e8c;"></i></span><span>Live Class Course</span>
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'liveclass,live_class_course_create,live_class_course_edit,live_class_course_delete,live_class_course_toggle_status,live_class_course_classes,add_scheduled_class,live_class_schedule_edit,live_class_schedule_delete' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-chalkboard-teacher" style="color: #e83e8c;"></i></span><span>Live Class Course</span>
     </a>
-    <div class="ad-submenu" {% if request.resolver_match.url_name in 'liveclass,live_class_course_create,live_class_course_edit,live_class_course_delete,live_class_course_toggle_status,live_class_course_classes,add_scheduled_class,live_class_schedule_edit,live_class_schedule_delete' %}style="display:flex;"{% endif %}>
-      <a href="{% url 'liveclass' %}" class="{% if request.resolver_match.url_name in 'liveclass,live_class_course_edit,live_class_course_classes,live_class_schedule_edit' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>Manage Courses
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'liveclass,live_class_course_create,live_class_course_edit,live_class_course_delete,live_class_course_toggle_status,live_class_course_classes,add_scheduled_class,live_class_schedule_edit,live_class_schedule_delete' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'liveclass' %}" class="{% if request.resolver_match.url_name in 'liveclass,live_class_course_edit,live_class_course_classes,live_class_schedule_edit' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>Manage Courses
       </a>
-      <a href="{% url 'live_class_course_create' %}" class="{% if request.resolver_match.url_name == 'live_class_course_create' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Add Course
+      <a href="{% url 'live_class_course_create' %}" class="{% if request.resolver_match.url_name == 'live_class_course_create' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Add Course
       </a>
     </div>
-
-
 
     <!-- Video Course -->
-    <a href="#" class="ad-dropdown {% if request.resolver_match.url_name in 'video_course_create,video_course_manage,video_course_edit_by_pk,video_course_delete' %}ad-open{% endif %}">
-      <span class="ad-ico"><i class="fas fa-video" style="color: #fd7e14;"></i></span><span>Video Course</span>
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'video_course_create,video_course_manage,video_course_edit_by_pk,video_course_delete' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-video" style="color: #fd7e14;"></i></span><span>Video Course</span>
     </a>
-    <div class="ad-submenu" {% if request.resolver_match.url_name in 'video_course_create,video_course_manage,video_course_edit_by_pk,video_course_delete' %}style="display:flex;"{% endif %}>
-      <a href="{% url 'video_course_manage' %}" class="{% if request.resolver_match.url_name in 'video_course_manage,video_course_edit_by_pk' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-cog" style="color: #6c757d;"></i></span>Manage Course
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'video_course_create,video_course_manage,video_course_edit_by_pk,video_course_delete' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'video_course_manage' %}" class="{% if request.resolver_match.url_name in 'video_course_manage,video_course_edit_by_pk' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-cog" style="color: #6c757d;"></i></span>Manage Course
       </a>
-      <a href="{% url 'video_course_create' %}" class="{% if request.resolver_match.url_name == 'video_course_create' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Add Course
+      <a href="{% url 'video_course_create' %}" class="{% if request.resolver_match.url_name == 'video_course_create' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Add Course
       </a>
     </div>
 
-
-
     <!-- Test Series -->
-    <a href="#" class="ad-dropdown {% if request.resolver_match.url_name in 'test_series_manage,test_series_create,test_create,question_create,test_edit,test_series_edit,test_series_detail' %}ad-open{% endif %}">
-      <span class="ad-ico"><i class="fas fa-clipboard" style="color: #20c997;"></i></span><span>Test Series</span>
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'test_series_manage,test_series_create,test_create,question_create,test_edit,test_series_edit,test_series_detail' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-clipboard" style="color: #20c997;"></i></span><span>Test Series</span>
     </a>
-    <div class="ad-submenu" {% if request.resolver_match.url_name in 'test_series_manage,test_series_create,test_create,question_create,test_edit,test_series_edit,test_series_detail' %}style="display:flex;"{% endif %}>
-      <a href="{% url 'test_series_manage' %}" class="{% if request.resolver_match.url_name in 'test_series_manage,test_series_detail,test_edit,test_series_edit' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>View All Series
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'test_series_manage,test_series_create,test_create,question_create,test_edit,test_series_edit,test_series_detail' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'test_series_manage' %}" class="{% if request.resolver_match.url_name in 'test_series_manage,test_series_detail,test_edit,test_series_edit' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>View All Series
       </a>
-      <a href="{% url 'test_series_create' %}" class="{% if request.resolver_match.url_name == 'test_series_create' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Add Test Series course
+      <a href="{% url 'test_series_create' %}" class="{% if request.resolver_match.url_name == 'test_series_create' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Add Test Series course
       </a>
-      <a href="#" class="{% if request.resolver_match.url_name in 'test_create,test_edit,question_create' %}ad-active{% endif %}" onclick="return false;" style="opacity: {% if request.resolver_match.url_name in 'test_create,test_edit,question_create' %}1{% else %}0.6{% endif %};">
-        <span class="ad-ico"><i class="fas fa-flask" style="color: #dc3545;"></i></span>Tests & Questions
+      <a href="#" class="{% if request.resolver_match.url_name in 'test_create,test_edit,question_create' %}admin-active{% endif %}" onclick="return false;" style="opacity: {% if request.resolver_match.url_name in 'test_create,test_edit,question_create' %}1{% else %}0.6{% endif %};">
+        <span class="admin-ico"><i class="fas fa-flask" style="color: #dc3545;"></i></span>Tests & Questions
       </a>
     </div>
       
     <!-- E-Library -->
-    <a href="{% url 'elibrary_manage' %}" class="{% if request.resolver_match.url_name in 'elibrary_manage,elibrary_course_create,elibrary_course_detail,elibrary_course_edit,elibrary_course_delete,elibrary_toggle_course_status,elibrary_pdf_upload_multiple,elibrary_pdf_manage,elibrary_analytics' %}ad-active{% endif %}">
-      <span class="ad-ico"><i class="fas fa-book" style="color: #795548;"></i></span><span>E-Library</span>
+    <a href="{% url 'elibrary_manage' %}" class="{% if request.resolver_match.url_name in 'elibrary_manage,elibrary_course_create,elibrary_course_detail,elibrary_course_edit,elibrary_course_delete,elibrary_toggle_course_status,elibrary_pdf_upload_multiple,elibrary_pdf_manage,elibrary_analytics' %}admin-active{% endif %}">
+      <span class="admin-ico"><i class="fas fa-book" style="color: #795548;"></i></span><span>E-Library</span>
     </a>
 
-
-
-    <!-- Product Bundling - NEW SECTION -->
-    <a href="#" class="ad-dropdown {% if request.resolver_match.url_name in 'bundle_manage,bundle_create,bundle_edit,bundle_detail,bundle_delete,bundle_toggle_status,bundle_toggle_featured,bundle_enrollments,bundle_analytics' %}ad-open{% endif %}">
-      <span class="ad-ico"><i class="fas fa-box-open" style="color: #9c27b0;"></i></span><span>Product Bundling</span>
+    <!-- Product Bundling -->
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'bundle_manage,bundle_create,bundle_edit,bundle_detail,bundle_delete,bundle_toggle_status,bundle_toggle_featured,bundle_enrollments,bundle_analytics' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-box-open" style="color: #9c27b0;"></i></span><span>Product Bundling</span>
     </a>
-    <div class="ad-submenu" {% if request.resolver_match.url_name in 'bundle_manage,bundle_create,bundle_edit,bundle_detail,bundle_delete,bundle_toggle_status,bundle_toggle_featured,bundle_enrollments,bundle_analytics' %}style="display:flex;"{% endif %}>
-      <a href="{% url 'bundle_manage' %}" class="{% if request.resolver_match.url_name in 'bundle_manage,bundle_edit,bundle_detail' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-boxes" style="color: #9c27b0;"></i></span>Manage Bundles
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'bundle_manage,bundle_create,bundle_edit,bundle_detail,bundle_delete,bundle_toggle_status,bundle_toggle_featured,bundle_enrollments,bundle_analytics' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'bundle_manage' %}" class="{% if request.resolver_match.url_name in 'bundle_manage,bundle_edit,bundle_detail' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-boxes" style="color: #9c27b0;"></i></span>Manage Bundles
       </a>
-      <a href="{% url 'bundle_create' %}" class="{% if request.resolver_match.url_name == 'bundle_create' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Create Bundle
+      <a href="{% url 'bundle_create' %}" class="{% if request.resolver_match.url_name == 'bundle_create' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Create Bundle
       </a>
     </div>
-
-
 
     <!-- Manage Categories -->
-    <a href="{% url 'manage_categories' %}" class="{% if request.resolver_match.url_name in 'manage_categories,create_category,edit_category,delete_category' %}ad-active{% endif %}">
-      <span class="ad-ico"><i class="fas fa-folder" style="color: #ffc107;"></i></span><span>Manage Categories</span>
+    <a href="{% url 'manage_categories' %}" class="{% if request.resolver_match.url_name in 'manage_categories,create_category,edit_category,delete_category' %}admin-active{% endif %}">
+      <span class="admin-ico"><i class="fas fa-folder" style="color: #ffc107;"></i></span><span>Manage Categories</span>
     </a>
-
-
 
     <!-- Coupons -->
-    <a href="#" class="ad-dropdown {% if request.resolver_match.url_name in 'coupon_list,coupon_create,coupon_edit,coupon_analytics' %}ad-open{% endif %}">
-      <span class="ad-ico"><i class="fas fa-ticket-alt" style="color: #e91e63;"></i></span><span>Coupons</span>
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'coupon_list,coupon_create,coupon_edit,coupon_analytics' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-ticket-alt" style="color: #e91e63;"></i></span><span>Coupons</span>
     </a>
-    <div class="ad-submenu" {% if request.resolver_match.url_name in 'coupon_list,coupon_create,coupon_edit,coupon_analytics' %}style="display:flex;"{% endif %}>
-      <a href="{% url 'coupon_list' %}" class="{% if request.resolver_match.url_name == 'coupon_list' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>Manage Coupons
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'coupon_list,coupon_create,coupon_edit,coupon_analytics' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'coupon_list' %}" class="{% if request.resolver_match.url_name == 'coupon_list' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>Manage Coupons
       </a>
-      <a href="{% url 'coupon_create' %}" class="{% if request.resolver_match.url_name == 'coupon_create' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Create Coupon
+      <a href="{% url 'coupon_create' %}" class="{% if request.resolver_match.url_name == 'coupon_create' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Create Coupon
       </a>
-      <a href="{% url 'coupon_analytics' %}" class="{% if request.resolver_match.url_name == 'coupon_analytics' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-chart-bar" style="color: #17a2b8;"></i></span>Analytics
+      <a href="{% url 'coupon_analytics' %}" class="{% if request.resolver_match.url_name == 'coupon_analytics' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-chart-bar" style="color: #17a2b8;"></i></span>Analytics
       </a>
     </div>
-
-
 
     <!-- Payment Dashboard -->
-    <a href="{% url 'paymentdashboard' %}" class="{% if request.resolver_match.url_name == 'paymentdashboard' %}ad-active{% endif %}">
-      <span class="ad-ico"><i class="fas fa-credit-card" style="color: #28a745;"></i></span><span>Payment Dashboard</span>
+    <a href="{% url 'paymentdashboard' %}" class="{% if request.resolver_match.url_name == 'paymentdashboard' %}admin-active{% endif %}">
+      <span class="admin-ico"><i class="fas fa-credit-card" style="color: #28a745;"></i></span><span>Payment Dashboard</span>
     </a>
-
-
 
     <!-- Customize Website -->
-    <a href="#" class="ad-dropdown {% if request.resolver_match.url_name in 'banneredit,banner_create,banner_edit_single,banner_delete,banner_toggle_status,other_details_edit,stat_card_create,stat_card_edit,stat_card_delete,stat_card_toggle_status,cta_section_create,cta_section_edit,cta_section_delete,cta_section_toggle_status,about_us_edit,about_us_section_edit,why_choose_create,why_choose_edit,why_choose_delete,why_choose_toggle_status,service_create,service_edit,service_delete,service_toggle_status,navbar_settings_edit,footer_edit,footer_settings_edit,footer_link_create,footer_link_edit,footer_link_delete,footer_link_toggle_status,footer_legal_create,footer_legal_edit,footer_legal_delete,footer_legal_toggle_status' %}ad-open{% endif %}">
-      <span class="ad-ico"><i class="fas fa-paint-brush" style="color: #ff5722;"></i></span><span>Customize Website</span>
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'banneredit,banner_create,banner_edit_single,banner_delete,banner_toggle_status,other_details_edit,stat_card_create,stat_card_edit,stat_card_delete,stat_card_toggle_status,cta_section_create,cta_section_edit,cta_section_delete,cta_section_toggle_status,about_us_edit,about_us_section_edit,why_choose_create,why_choose_edit,why_choose_delete,why_choose_toggle_status,service_create,service_edit,service_delete,service_toggle_status,navbar_settings_edit,footer_edit,footer_settings_edit,footer_link_create,footer_link_edit,footer_link_delete,footer_link_toggle_status,footer_legal_create,footer_legal_edit,footer_legal_delete,footer_legal_toggle_status' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-paint-brush" style="color: #ff5722;"></i></span><span>Customize Website</span>
     </a>
-    <div class="ad-submenu" {% if request.resolver_match.url_name in 'banneredit,banner_create,banner_edit_single,banner_delete,banner_toggle_status,other_details_edit,stat_card_create,stat_card_edit,stat_card_delete,stat_card_toggle_status,cta_section_create,cta_section_edit,cta_section_delete,cta_section_toggle_status,about_us_edit,about_us_section_edit,why_choose_create,why_choose_edit,why_choose_delete,why_choose_toggle_status,service_create,service_edit,service_delete,service_toggle_status,navbar_settings_edit,footer_edit,footer_settings_edit,footer_link_create,footer_link_edit,footer_link_delete,footer_link_toggle_status,footer_legal_create,footer_legal_edit,footer_legal_delete,footer_legal_toggle_status' %}style="display:flex;"{% endif %}>
-      <a href="{% url 'banneredit' %}" class="{% if request.resolver_match.url_name in 'banneredit,banner_create,banner_edit_single,banner_delete,banner_toggle_status' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-image" style="color: #673ab7;"></i></span>Banner Settings
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'banneredit,banner_create,banner_edit_single,banner_delete,banner_toggle_status,other_details_edit,stat_card_create,stat_card_edit,stat_card_delete,stat_card_toggle_status,cta_section_create,cta_section_edit,cta_section_delete,cta_section_toggle_status,about_us_edit,about_us_section_edit,why_choose_create,why_choose_edit,why_choose_delete,why_choose_toggle_status,service_create,service_edit,service_delete,service_toggle_status,navbar_settings_edit,footer_edit,footer_settings_edit,footer_link_create,footer_link_edit,footer_link_delete,footer_link_toggle_status,footer_legal_create,footer_legal_edit,footer_legal_delete,footer_legal_toggle_status' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'banneredit' %}" class="{% if request.resolver_match.url_name in 'banneredit,banner_create,banner_edit_single,banner_delete,banner_toggle_status' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-image" style="color: #673ab7;"></i></span>Banner Settings
       </a>
-      <a href="{% url 'other_details_edit' %}" class="{% if request.resolver_match.url_name in 'other_details_edit,stat_card_create,stat_card_edit,stat_card_delete,stat_card_toggle_status,cta_section_create,cta_section_edit,cta_section_delete,cta_section_toggle_status' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-info-circle" style="color: #17a2b8;"></i></span>Site Details
+      <a href="{% url 'other_details_edit' %}" class="{% if request.resolver_match.url_name in 'other_details_edit,stat_card_create,stat_card_edit,stat_card_delete,stat_card_toggle_status,cta_section_create,cta_section_edit,cta_section_delete,cta_section_toggle_status' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-info-circle" style="color: #17a2b8;"></i></span>Site Details
       </a>
-      <a href="{% url 'about_us_edit' %}" class="{% if request.resolver_match.url_name in 'about_us_edit,about_us_section_edit,why_choose_create,why_choose_edit,why_choose_delete,why_choose_toggle_status,service_create,service_edit,service_delete,service_toggle_status' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-info" style="color: #2196f3;"></i></span>About Page
+      <a href="{% url 'about_us_edit' %}" class="{% if request.resolver_match.url_name in 'about_us_edit,about_us_section_edit,why_choose_create,why_choose_edit,why_choose_delete,why_choose_toggle_status,service_create,service_edit,service_delete,service_toggle_status' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-info" style="color: #2196f3;"></i></span>About Page
       </a>
-      <a href="{% url 'navbar_settings_edit' %}" class="{% if request.resolver_match.url_name == 'navbar_settings_edit' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-compass" style="color: #ff9800;"></i></span>Navigation
+      <a href="{% url 'navbar_settings_edit' %}" class="{% if request.resolver_match.url_name == 'navbar_settings_edit' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-compass" style="color: #ff9800;"></i></span>Navigation
       </a>
-      <a href="{% url 'footer_edit' %}" class="{% if request.resolver_match.url_name in 'footer_edit,footer_settings_edit,footer_link_create,footer_link_edit,footer_link_delete,footer_link_toggle_status,footer_legal_create,footer_legal_edit,footer_legal_delete,footer_legal_toggle_status' %}ad-active{% endif %}">
-        <span class="ad-ico"><i class="fas fa-shoe-prints" style="color: #795548;"></i></span>Footer Settings
+      <a href="{% url 'footer_edit' %}" class="{% if request.resolver_match.url_name in 'footer_edit,footer_settings_edit,footer_link_create,footer_link_edit,footer_link_delete,footer_link_toggle_status,footer_legal_create,footer_legal_edit,footer_legal_delete,footer_legal_toggle_status' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-shoe-prints" style="color: #795548;"></i></span>Footer Settings
       </a>
     </div>
+
     <!-- Developer Popup -->
-<a href="{% url 'developer_popup_manage' %}" class="{% if request.resolver_match.url_name in 'developer_popup_manage,developer_popup_create,developer_popup_edit' %}ad-active{% endif %}">
-  <span class="ad-ico"><i class="fas fa-user-circle" style="color: #9c27b0;"></i></span><span>Developer Popup</span>
-</a>
-
-
-
-    <!-- OTP Configuration -->
-    <a href="{% url 'smtp_configuration' %}" class="{% if request.resolver_match.url_name in 'smtp_configuration,smtp_create,smtp_edit,smtp_test,smtp_delete' %}ad-active{% endif %}">
-      <span class="ad-ico"><i class="fas fa-envelope" style="color: #ff5722;"></i></span><span>OTP Configuration</span>
+    <a href="{% url 'developer_popup_manage' %}" class="{% if request.resolver_match.url_name in 'developer_popup_manage,developer_popup_create,developer_popup_edit' %}admin-active{% endif %}">
+      <span class="admin-ico"><i class="fas fa-user-circle" style="color: #9c27b0;"></i></span><span>Developer Popup</span>
     </a>
 
+    <!-- Notifications -->
+    <a href="#" class="admin-dropdown {% if request.resolver_match.url_name in 'adminnotifications,notification_create,notification_delete' %}admin-open{% endif %}">
+      <span class="admin-ico"><i class="fas fa-bell" style="color: #ff9800;"></i></span><span>Notifications</span>
+    </a>
+    <div class="admin-submenu" {% if request.resolver_match.url_name in 'adminnotifications,notification_create,notification_delete' %}style="display:flex;"{% endif %}>
+      <a href="{% url 'adminnotifications' %}" class="{% if request.resolver_match.url_name in 'adminnotifications,notification_delete' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-list" style="color: #007bff;"></i></span>Manage Notifications
+      </a>
+      <a href="{% url 'notification_create' %}" class="{% if request.resolver_match.url_name == 'notification_create' %}admin-active{% endif %}">
+        <span class="admin-ico"><i class="fas fa-plus" style="color: #28a745;"></i></span>Create Notification
+      </a>
+    </div>
 
+    <!-- OTP Configuration -->
+    <a href="{% url 'smtp_configuration' %}" class="{% if request.resolver_match.url_name in 'smtp_configuration,smtp_create,smtp_edit,smtp_test,smtp_delete' %}admin-active{% endif %}">
+      <span class="admin-ico"><i class="fas fa-envelope" style="color: #ff5722;"></i></span><span>OTP Configuration</span>
+    </a>
 
     <!-- Log Out -->
     <a href="{% url 'logout_user' %}">
-      <span class="ad-ico"><i class="fas fa-sign-out-alt" style="color: #dc3545;"></i></span><span>Log Out</span>
+      <span class="admin-ico"><i class="fas fa-sign-out-alt" style="color: #dc3545;"></i></span><span>Log Out</span>
     </a>
   </nav>
 </aside>

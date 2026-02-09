@@ -7,34 +7,34 @@
     <h1 class="h1">E-Library Course Management</h1>
     <p class="small">Manage digital courses and PDF collections for students</p>
 
-    <!-- Statistics using existing .ad-kpis -->
-    <section class="ad-kpis">
-        <div class="ad-kpi">
-            <div class="ad-kpi-ico">📚</div>
+    <!-- Statistics using existing .admin-kpis -->
+    <section class="admin-kpis">
+        <div class="admin-kpi">
+            <div class="admin-kpi-ico">📚</div>
             <div>
-                <div class="ad-kpi-label">Total Courses</div>
-                <div class="ad-kpi-value">{{ stats.total_courses }}</div>
+                <div class="admin-kpi-label">Total Courses</div>
+                <div class="admin-kpi-value">{{ stats.total_courses }}</div>
             </div>
         </div>
-        <div class="ad-kpi">
-            <div class="ad-kpi-ico">✅</div>
+        <div class="admin-kpi">
+            <div class="admin-kpi-ico">✅</div>
             <div>
-                <div class="ad-kpi-label">Active Courses</div>
-                <div class="ad-kpi-value">{{ stats.active_courses }}</div>
+                <div class="admin-kpi-label">Active Courses</div>
+                <div class="admin-kpi-value">{{ stats.active_courses }}</div>
             </div>
         </div>
-        <div class="ad-kpi">
-            <div class="ad-kpi-ico">👥</div>
+        <div class="admin-kpi">
+            <div class="admin-kpi-ico">👥</div>
             <div>
-                <div class="ad-kpi-label">Enrollments</div>
-                <div class="ad-kpi-value">{{ stats.total_enrollments }}</div>
+                <div class="admin-kpi-label">Enrollments</div>
+                <div class="admin-kpi-value">{{ stats.total_enrollments }}</div>
             </div>
         </div>
-        <div class="ad-kpi">
-            <div class="ad-kpi-ico">💰</div>
+        <div class="admin-kpi">
+            <div class="admin-kpi-ico">💰</div>
             <div>
-                <div class="ad-kpi-label">Total Revenue</div>
-                <div class="ad-kpi-value">₹{{ stats.total_revenue|floatformat:0 }}</div>
+                <div class="admin-kpi-label">Total Revenue</div>
+                <div class="admin-kpi-value">₹{{ stats.total_revenue|floatformat:0 }}</div>
             </div>
         </div>
     </section>
@@ -51,18 +51,18 @@
         </div>
 
         <!-- Filters using existing card header structure -->
-        <div class="ad-card-hd">
+        <div class="admin-card-hd">
             <h3>E-Library Courses</h3>
-            <div class="ad-filters">
+            <div class="admin-filters">
                 <form method="get" style="display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end;">
                     <input 
                         type="text" 
                         name="search" 
                         value="{{ search_query }}" 
                         placeholder="Search courses, instructor, tags..." 
-                        class="ad-filter-input"
+                        class="admin-filter-input"
                     />
-                    <select name="category" class="ad-filter-select">
+                    <select name="category" class="admin-filter-select">
                         <option value="">All Categories</option>
                         {% for category in categories %}
                             <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
@@ -70,7 +70,7 @@
                             </option>
                         {% endfor %}
                     </select>
-                    <select name="difficulty" class="ad-filter-select">
+                    <select name="difficulty" class="admin-filter-select">
                         <option value="">All Levels</option>
                         {% for code, name in difficulty_choices %}
                             <option value="{{ code }}" {% if difficulty_filter == code %}selected{% endif %}>
@@ -78,14 +78,14 @@
                             </option>
                         {% endfor %}
                     </select>
-                    <select name="status" class="ad-filter-select">
+                    <select name="status" class="admin-filter-select">
                         <option value="">All Status</option>
                         <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                         <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
                         <option value="free" {% if status_filter == 'free' %}selected{% endif %}>Free Courses</option>
                         <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid Courses</option>
                     </select>
-                    <button type="submit" class="ad-filter-btn">Filter</button>
+                    <button type="submit" class="admin-filter-btn">Filter</button>
                     {% if search_query or category_filter or difficulty_filter or status_filter %}
                         <a href="{% url 'elibrary_manage' %}" class="btn">Clear</a>
                     {% endif %}
@@ -94,10 +94,10 @@
         </div>
 
         <!-- Course List using existing table styles -->
-        <div class="ad-card-bd">
+        <div class="admin-card-bd">
             {% if page_obj %}
                 <div class="table-wrapper">
-                    <table class="ad-table">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>Course</th>
@@ -118,7 +118,7 @@
                                         {% if course.cover_image %}
                                             <img src="{{ course.cover_image.url }}" alt="{{ course.title }}" style="width: 50px; height: 35px; object-fit: cover; border-radius: 6px;">
                                         {% else %}
-                                            <div style="width: 50px; height: 35px; background: var(--ad-primary-100); color: var(--ad-primary); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold;">📚</div>
+                                            <div style="width: 50px; height: 35px; background: var(--admin-primary-100); color: var(--admin-primary); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold;">📚</div>
                                         {% endif %}
                                         <div>
                                             <div class="user-name">{{ course.title }}</div>
@@ -144,10 +144,10 @@
                                             <span class="date-primary" style="color: #10b981; font-weight: 600;">FREE</span>
                                         {% else %}
                                             {% if course.has_discount %}
-                                                <span class="date-primary" style="color: var(--ad-primary);">₹{{ course.current_price }}</span>
+                                                <span class="date-primary" style="color: var(--admin-primary);">₹{{ course.current_price }}</span>
                                                 <span class="date-secondary" style="text-decoration: line-through;">₹{{ course.price }}</span>
                                             {% else %}
-                                                <span class="date-primary" style="color: var(--ad-primary);">₹{{ course.price }}</span>
+                                                <span class="date-primary" style="color: var(--admin-primary);">₹{{ course.price }}</span>
                                             {% endif %}
                                         {% endif %}
                                     </div>

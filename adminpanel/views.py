@@ -46,8 +46,71 @@ from base.models import Payment , UserCourseAccess
 def is_admin(user):
     return user.is_authenticated and user.is_staff
     
-#Intro popup views
 
+@login_required(login_url='login')
+def notification_manage(request):
+    """Manage all notifications"""
+    if not request.user.is_staff:
+        messages.error(request, 'Access denied. Admin privileges required.')
+        return redirect('home')
+    
+    notifications = Notification.objects.all()
+    
+    context = {
+        'notifications': notifications,
+        'total_notifications': notifications.count(),
+    }
+    
+    return render(request, 'notifications/notification_manage.html', context)
+
+
+@login_required(login_url='login')
+def notification_create(request):
+    """Create new notification"""
+    if not request.user.is_staff:
+        messages.error(request, 'Access denied. Admin privileges required.')
+        return redirect('home')
+    
+    if request.method == 'POST':
+        form = NotificationForm(request.POST)
+        if form.is_valid():
+            notification = form.save(commit=False)
+            # Automatically set scheduled_time to current time
+            notification.scheduled_time = timezone.now()
+            # Automatically set is_active to True
+            notification.is_active = True
+            notification.save()
+            messages.success(request, f'Notification "{notification.title}" created successfully!')
+            return redirect('adminnotifications')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = NotificationForm()
+    
+    context = {
+        'form': form,
+        'action': 'Create'
+    }
+    
+    return render(request, 'notifications/notification_form.html', context)
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST", "GET"])
+def notification_delete(request, pk):
+    """Delete notification"""
+    if not request.user.is_staff:
+        messages.error(request, 'Access denied.')
+        return redirect('home')
+    
+    notification = get_object_or_404(Notification, pk=pk)
+    title = notification.title
+    notification.delete()
+    
+    messages.success(request, f'Notification "{title}" deleted successfully!')
+    return redirect('adminnotifications')
+
+#Intro popup views
 @login_required
 def developer_popup_manage(request):
     """Manage developer popup settings"""

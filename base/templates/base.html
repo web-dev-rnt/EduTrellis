@@ -1,567 +1,727 @@
 <!DOCTYPE html>    
-  {% load static %}
-  {% load banner_tags %}
-  {% load navbar_tags %}
-  {% load developer_popup_tags %}
-  <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Succeed with EduTrellis</title>
-    <!-- Google Fonts and Icon Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    
-    <!-- Dynamic Favicon using template tag -->
-    {% get_favicon_url as favicon_url %}
-    {% if favicon_url %}
-        <link rel="icon" type="image/png" href="{{ favicon_url }}">
-        <link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
-    {% else %}
-        <link rel="icon" type="image/png" href="{% static 'img/favicon.ico' %}">
-    {% endif %}
+{% load static %}
+{% load banner_tags %}
+{% load navbar_tags %}
+{% load developer_popup_tags %}
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  
+  <title>Succeed with EduTrellis - Complete Learning Platform</title>
+  <meta name="description" content="Access live classes, video courses, test series, and e-library. Learn anytime, anywhere with EduTrellis.">
+  <meta name="keywords" content="online education, live classes, video courses, test series, e-library, eduTrellis">
+  <meta name="author" content="EduTrellis">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#c7212f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EduTrellis">
+  <meta name="application-name" content="EduTrellis">
+  <meta name="msapplication-TileColor" content="#c7212f">
+  <meta name="msapplication-tap-highlight" content="no">
+  <meta name="msapplication-TileImage" content="{% static 'img/icon-144x144.png' %}">
+  
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="{% url 'manifest1' %}">
+  
+  <!-- Dynamic Favicon using template tag -->
+  {% get_favicon_url as favicon_url %}
+  {% if favicon_url %}
+      <link rel="icon" type="image/png" sizes="32x32" href="{{ favicon_url }}">
+      <link rel="icon" type="image/png" sizes="16x16" href="{{ favicon_url }}">
+      <link rel="shortcut icon" type="image/png" href="{{ favicon_url }}">
+      <link rel="apple-touch-icon" href="{{ favicon_url }}">
+      <link rel="apple-touch-icon" sizes="152x152" href="{{ favicon_url }}">
+      <link rel="apple-touch-icon" sizes="180x180" href="{{ favicon_url }}">
+      <link rel="apple-touch-icon" sizes="167x167" href="{{ favicon_url }}">
+  {% else %}
+      <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32x32.png' %}">
+      <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/favicon-16x16.png' %}">
+      <link rel="shortcut icon" type="image/png" href="{% static 'img/favicon.ico' %}">
+      <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/icon-180x180.png' %}">
+      <link rel="apple-touch-icon" sizes="167x167" href="{% static 'img/icon-167x167.png' %}">
+      <link rel="apple-touch-icon" sizes="152x152" href="{% static 'img/icon-152x152.png' %}">
+      <link rel="apple-touch-icon" sizes="144x144" href="{% static 'img/icon-144x144.png' %}">
+      <link rel="apple-touch-icon" sizes="120x120" href="{% static 'img/icon-120x120.png' %}">
+      <link rel="apple-touch-icon" href="{% static 'img/icon-192x192.png' %}">
+  {% endif %}
+  
+  <!-- Google Fonts and Icon Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
+  <style>
+    /* Global Responsive Fixes */
+    html, body {
+      width: 100%;
+      overflow-x: hidden;
+      position: relative;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    <style>
-      /* Global Responsive Fixes */
-      html, body {
-        width: 100%;
-        overflow-x: hidden;
-        position: relative;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+    *, *::before, *::after {
+      box-sizing: inherit;
+    }
+
+    /* Developer Info Popup */
+    .dev-popup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+      padding: 10px;
+    }
+
+    .dev-popup-overlay.active {
+      display: flex !important;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { 
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
       }
-
-      *, *::before, *::after {
-        box-sizing: inherit;
+      to { 
+        transform: translateY(0) scale(1);
+        opacity: 1;
       }
+    }
 
-      /* Developer Info Popup */
-      .dev-popup-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(3px);
-        z-index: 10000;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        animation: fadeIn 0.3s ease;
-        padding: 10px;
+    .dev-popup {
+      background: #ffffff;
+      border-radius: 12px;
+      width: min(550px, calc(100vw - 20px));
+      max-width: calc(100vw - 20px);
+      max-height: calc(100vh - 20px);
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+      position: relative;
+      animation: slideUp 0.4s ease-out;
+      margin: 10px;
+    }
+
+    .dev-popup-close-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #f3f4f6;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-size: 18px;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .dev-popup-close-btn:hover {
+      background: #e5e7eb;
+      color: #374151;
+      transform: rotate(90deg);
+    }
+
+    .dev-popup-header {
+      padding: 40px 20px 25px;
+      text-align: center;
+      background: #ffffff;
+    }
+
+    .dev-popup-profile {
+      width: 110px;
+      height: 110px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(199, 33, 47, 0.2);
+      border: 4px solid #fde8ec;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #c7212f 0%, #a01b27 100%);
+    }
+
+    .dev-popup-profile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .dev-popup-profile i {
+      font-size: 48px;
+      color: white;
+    }
+
+    .dev-popup-greeting {
+      font-size: 1rem;
+      color: #374151;
+      margin: 0 0 8px 0;
+      font-weight: 400;
+    }
+
+    .dev-popup-name {
+      font-size: 1.6rem;
+      color: #111827;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+      word-break: break-word;
+    }
+
+    .dev-popup-tagline {
+      font-size: 0.95rem;
+      color: #6b7280;
+      margin: 0 0 16px 0;
+      line-height: 1.6;
+      padding: 0 10px;
+    }
+
+    .dev-popup-body {
+      padding: 0 20px 25px;
+    }
+
+    .dev-popup-message {
+      background: #fff5f6;
+      border-left: 4px solid #c7212f;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .dev-popup-message p {
+      margin: 0 0 10px 0;
+      font-size: 0.95rem;
+      color: #374151;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .dev-popup-message p:last-child {
+      margin-bottom: 0;
+    }
+
+    .dev-popup-message strong {
+      color: #c7212f;
+      font-weight: 600;
+    }
+
+    .dev-contact-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .dev-contact-item:last-child {
+      border-bottom: none;
+    }
+
+    .dev-contact-label {
+      font-size: 0.9rem;
+      color: #6b7280;
+      font-weight: 600;
+      min-width: 85px;
+      flex-shrink: 0;
+    }
+
+    .dev-contact-value {
+      font-size: 0.95rem;
+      color: #111827;
+      font-weight: 500;
+      flex: 1;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .dev-contact-value a {
+      color: #c7212f;
+      text-decoration: none;
+      transition: color 0.2s ease;
+      word-break: break-all;
+    }
+
+    .dev-contact-value a:hover {
+      color: #a01b27;
+      text-decoration: underline;
+    }
+
+    .dev-popup-footer {
+      padding: 18px 20px;
+      background: #fef2f2;
+      text-align: center;
+      border-top: 1px solid #fde8ec;
+    }
+
+    .dev-popup-footer-text {
+      font-size: 0.95rem;
+      color: #374151;
+      margin: 0;
+      font-style: italic;
+      font-weight: 500;
+    }
+
+    .dev-popup-footer-text strong {
+      color: #c7212f;
+    }
+
+    /* PWA Install Button Styles */
+    #pwa-install-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #c7212f 0%, #a01b27 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(199, 33, 47, 0.4);
+      z-index: 9998;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+      animation: pulse 2s infinite;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    #pwa-install-btn i {
+      font-size: 18px;
+    }
+
+    #pwa-install-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(199, 33, 47, 0.5);
+    }
+
+    #pwa-install-btn:active {
+      transform: translateY(-1px);
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 6px 20px rgba(199, 33, 47, 0.4);
       }
-
-
-      .dev-popup-overlay.active {
-        display: flex !important;
+      50% {
+        box-shadow: 0 6px 30px rgba(199, 33, 47, 0.6);
       }
+    }
 
+    /* Install banner for iOS */
+    .ios-install-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #c7212f 0%, #a01b27 100%);
+      color: white;
+      padding: 16px 20px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 9997;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+      font-family: 'Montserrat', sans-serif;
+    }
 
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
+    .ios-install-banner.show {
+      display: flex;
+    }
 
+    .ios-install-content {
+      flex: 1;
+      padding-right: 10px;
+    }
 
-      @keyframes slideUp {
-        from { 
-          transform: translateY(30px) scale(0.95);
-          opacity: 0;
-        }
-        to { 
-          transform: translateY(0) scale(1);
-          opacity: 1;
-        }
-      }
+    .ios-install-content h3 {
+      margin: 0 0 5px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
 
+    .ios-install-content p {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.9;
+    }
 
+    .ios-install-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .ios-install-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Tablet Responsive - 768px and below */
+    @media (max-width: 768px) {
       .dev-popup {
-        background: #ffffff;
-        border-radius: 12px;
-        width: min(550px, calc(100vw - 20px));
-        max-width: calc(100vw - 20px);
-        max-height: calc(100vh - 20px);
-        overflow-y: auto;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-        position: relative;
-        animation: slideUp 0.4s ease-out;
+        width: calc(100vw - 20px);
         margin: 10px;
       }
 
-
-      .dev-popup-close-btn {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: #f3f4f6;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7280;
-        font-size: 18px;
-        transition: all 0.2s ease;
-        z-index: 10;
-      }
-
-
-      .dev-popup-close-btn:hover {
-        background: #e5e7eb;
-        color: #374151;
-        transform: rotate(90deg);
-      }
-
-
       .dev-popup-header {
-        padding: 40px 20px 25px;
-        text-align: center;
-        background: #ffffff;
+        padding: 35px 18px 22px;
       }
-
 
       .dev-popup-profile {
-        width: 110px;
-        height: 110px;
-        margin: 0 auto 20px;
-        border-radius: 50%;
-        overflow: hidden;
-        box-shadow: 0 4px 16px rgba(199, 33, 47, 0.2);
-        border: 4px solid #fde8ec;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #c7212f 0%, #a01b27 100%);
+        width: 95px;
+        height: 95px;
+        margin-bottom: 16px;
       }
-
-
-      .dev-popup-profile img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center;
-      }
-
 
       .dev-popup-profile i {
-        font-size: 48px;
-        color: white;
+        font-size: 42px;
       }
-
-
-      .dev-popup-greeting {
-        font-size: 1rem;
-        color: #374151;
-        margin: 0 0 8px 0;
-        font-weight: 400;
-      }
-
 
       .dev-popup-name {
-        font-size: 1.6rem;
-        color: #111827;
-        font-weight: 700;
-        margin: 0 0 12px 0;
-        word-break: break-word;
+        font-size: 1.4rem;
+        margin-bottom: 10px;
       }
-
 
       .dev-popup-tagline {
-        font-size: 0.95rem;
-        color: #6b7280;
-        margin: 0 0 16px 0;
-        line-height: 1.6;
-        padding: 0 10px;
+        font-size: 0.88rem;
+        padding: 0 8px;
       }
-
 
       .dev-popup-body {
-        padding: 0 20px 25px;
+        padding: 0 18px 20px;
       }
-
 
       .dev-popup-message {
-        background: #fff5f6;
-        border-left: 4px solid #c7212f;
-        padding: 16px;
-        border-radius: 8px;
-        margin-bottom: 20px;
+        padding: 14px;
       }
-
-
-      .dev-popup-message p {
-        margin: 0 0 10px 0;
-        font-size: 0.95rem;
-        color: #374151;
-        line-height: 1.6;
-        word-break: break-word;
-      }
-
-
-      .dev-popup-message p:last-child {
-        margin-bottom: 0;
-      }
-
-
-      .dev-popup-message strong {
-        color: #c7212f;
-        font-weight: 600;
-      }
-
-
-      .dev-contact-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 0;
-        border-bottom: 1px solid #f3f4f6;
-      }
-
-
-      .dev-contact-item:last-child {
-        border-bottom: none;
-      }
-
 
       .dev-contact-label {
-        font-size: 0.9rem;
-        color: #6b7280;
-        font-weight: 600;
-        min-width: 85px;
-        flex-shrink: 0;
+        min-width: 70px;
+        font-size: 0.85rem;
       }
-
 
       .dev-contact-value {
-        font-size: 0.95rem;
-        color: #111827;
-        font-weight: 500;
-        flex: 1;
-        word-break: break-word;
-        overflow-wrap: break-word;
+        font-size: 0.88rem;
       }
-
-
-      .dev-contact-value a {
-        color: #c7212f;
-        text-decoration: none;
-        transition: color 0.2s ease;
-        word-break: break-all;
-      }
-
-
-      .dev-contact-value a:hover {
-        color: #a01b27;
-        text-decoration: underline;
-      }
-
 
       .dev-popup-footer {
-        padding: 18px 20px;
-        background: #fef2f2;
-        text-align: center;
-        border-top: 1px solid #fde8ec;
+        padding: 16px 18px;
       }
 
+      #pwa-install-btn {
+        bottom: 15px;
+        right: 15px;
+        padding: 12px 24px;
+        font-size: 14px;
+      }
+
+      #pwa-install-btn i {
+        font-size: 16px;
+      }
+    }
+
+    /* Mobile Responsive - 480px and below */
+    @media (max-width: 480px) {
+      .dev-popup-overlay {
+        padding: 8px;
+      }
+
+      .dev-popup {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+        margin: 8px;
+        border-radius: 10px;
+      }
+
+      .dev-popup-close-btn {
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+      }
+
+      .dev-popup-header {
+        padding: 30px 15px 18px;
+      }
+
+      .dev-popup-profile {
+        width: 85px;
+        height: 85px;
+        margin-bottom: 14px;
+        border-width: 3px;
+      }
+
+      .dev-popup-profile i {
+        font-size: 38px;
+      }
+
+      .dev-popup-greeting {
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+      }
+
+      .dev-popup-name {
+        font-size: 1.25rem;
+        margin-bottom: 8px;
+      }
+
+      .dev-popup-tagline {
+        font-size: 0.85rem;
+        padding: 0 5px;
+        line-height: 1.5;
+      }
+
+      .dev-popup-body {
+        padding: 0 15px 18px;
+      }
+
+      .dev-popup-message {
+        padding: 12px;
+        border-left-width: 3px;
+      }
+
+      .dev-popup-message p {
+        font-size: 0.82rem;
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+
+      .dev-contact-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 10px 0;
+      }
+
+      .dev-contact-label {
+        min-width: auto;
+        font-size: 0.8rem;
+      }
+
+      .dev-contact-value {
+        font-size: 0.85rem;
+      }
+
+      .dev-popup-footer {
+        padding: 14px 15px;
+      }
 
       .dev-popup-footer-text {
-        font-size: 0.95rem;
-        color: #374151;
-        margin: 0;
-        font-style: italic;
-        font-weight: 500;
+        font-size: 0.82rem;
+        line-height: 1.4;
       }
 
-
-      .dev-popup-footer-text strong {
-        color: #c7212f;
+      #pwa-install-btn {
+        bottom: 80px;
+        right: 10px;
+        padding: 10px 20px;
+        font-size: 13px;
+        gap: 8px;
       }
 
-
-      /* Tablet Responsive - 768px and below */
-      @media (max-width: 768px) {
-        .dev-popup {
-          width: calc(100vw - 20px);
-          margin: 10px;
-        }
-
-
-        .dev-popup-header {
-          padding: 35px 18px 22px;
-        }
-
-
-        .dev-popup-profile {
-          width: 95px;
-          height: 95px;
-          margin-bottom: 16px;
-        }
-
-
-        .dev-popup-profile i {
-          font-size: 42px;
-        }
-
-
-        .dev-popup-name {
-          font-size: 1.4rem;
-          margin-bottom: 10px;
-        }
-
-
-        .dev-popup-tagline {
-          font-size: 0.88rem;
-          padding: 0 8px;
-        }
-
-
-        .dev-popup-body {
-          padding: 0 18px 20px;
-        }
-
-        .dev-popup-message {
-          padding: 14px;
-        }
-
-
-        .dev-contact-label {
-          min-width: 70px;
-          font-size: 0.85rem;
-        }
-
-
-        .dev-contact-value {
-          font-size: 0.88rem;
-        }
-
-        .dev-popup-footer {
-          padding: 16px 18px;
-        }
+      #pwa-install-btn i {
+        font-size: 14px;
       }
 
-
-      /* Mobile Responsive - 480px and below */
-      @media (max-width: 480px) {
-        .dev-popup-overlay {
-          padding: 8px;
-        }
-
-        .dev-popup {
-          width: calc(100vw - 16px);
-          max-width: calc(100vw - 16px);
-          margin: 8px;
-          border-radius: 10px;
-        }
-
-        .dev-popup-close-btn {
-          top: 10px;
-          right: 10px;
-          width: 30px;
-          height: 30px;
-          font-size: 16px;
-        }
-
-        .dev-popup-header {
-          padding: 30px 15px 18px;
-        }
-
-
-        .dev-popup-profile {
-          width: 85px;
-          height: 85px;
-          margin-bottom: 14px;
-          border-width: 3px;
-        }
-
-
-        .dev-popup-profile i {
-          font-size: 38px;
-        }
-
-        .dev-popup-greeting {
-          font-size: 0.9rem;
-          margin-bottom: 6px;
-        }
-
-
-        .dev-popup-name {
-          font-size: 1.25rem;
-          margin-bottom: 8px;
-        }
-
-
-        .dev-popup-tagline {
-          font-size: 0.85rem;
-          padding: 0 5px;
-          line-height: 1.5;
-        }
-
-
-        .dev-popup-body {
-          padding: 0 15px 18px;
-        }
-
-
-        .dev-popup-message {
-          padding: 12px;
-          border-left-width: 3px;
-        }
-
-
-        .dev-popup-message p {
-          font-size: 0.82rem;
-          line-height: 1.5;
-          margin-bottom: 8px;
-        }
-
-
-        .dev-contact-item {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 4px;
-          padding: 10px 0;
-        }
-
-
-        .dev-contact-label {
-          min-width: auto;
-          font-size: 0.8rem;
-        }
-
-        .dev-contact-value {
-          font-size: 0.85rem;
-        }
-
-
-        .dev-popup-footer {
-          padding: 14px 15px;
-        }
-
-
-        .dev-popup-footer-text {
-          font-size: 0.82rem;
-          line-height: 1.4;
-        }
+      .ios-install-banner {
+        padding: 12px 15px;
       }
 
-      /* Extra Small Mobile - 360px and below */
-      @media (max-width: 360px) {
-        .dev-popup-overlay {
-          padding: 5px;
-        }
-
-        .dev-popup {
-          width: calc(100vw - 10px);
-          max-width: calc(100vw - 10px);
-          margin: 5px;
-        }
-
-        .dev-popup-header {
-          padding: 25px 12px 15px;
-        }
-
-        .dev-popup-profile {
-          width: 75px;
-          height: 75px;
-          margin-bottom: 12px;
-        }
-
-        .dev-popup-profile i {
-          font-size: 34px;
-        }
-
-        .dev-popup-greeting {
-          font-size: 0.85rem;
-        }
-
-        .dev-popup-name {
-          font-size: 1.15rem;
-        }
-
-        .dev-popup-tagline {
-          font-size: 0.8rem;
-        }
-
-        .dev-popup-body {
-          padding: 0 12px 15px;
-        }
-
-        .dev-popup-message {
-          padding: 10px;
-        }
-
-        .dev-popup-message p {
-          font-size: 0.78rem;
-        }
-
-        .dev-contact-label {
-          font-size: 0.75rem;
-        }
-
-        .dev-contact-value {
-          font-size: 0.8rem;
-        }
-
-        .dev-popup-footer {
-          padding: 12px;
-        }
-
-        .dev-popup-footer-text {
-          font-size: 0.78rem;
-        }
+      .ios-install-content h3 {
+        font-size: 14px;
       }
-    </style>
-      
-  </head>
-  <body>
-      <!-- Developer Info Popup (Dynamic) -->
-      {% render_developer_popup %}
 
+      .ios-install-content p {
+        font-size: 12px;
+      }
 
-      {% block navbard %}
-      {% include "navbar.html" %}
-      {% include "modal.html" %}
-      {% include "message.html" %}
-      {% endblock navbard %}
+      .ios-install-close {
+        width: 28px;
+        height: 28px;
+        font-size: 16px;
+      }
+    }
 
+    /* Extra Small Mobile - 360px and below */
+    @media (max-width: 360px) {
+      .dev-popup-overlay {
+        padding: 5px;
+      }
 
-      {% block content %}
-      {% render_banner_slider %}
+      .dev-popup {
+        width: calc(100vw - 10px);
+        max-width: calc(100vw - 10px);
+        margin: 5px;
+      }
 
+      .dev-popup-header {
+        padding: 25px 12px 15px;
+      }
 
-      <!-- Dynamic Stats Section -->
-      {% render_stats_section %}
-      
-      <!-- Dynamic CTA Section -->
-      {% render_cta_section %}
+      .dev-popup-profile {
+        width: 75px;
+        height: 75px;
+        margin-bottom: 12px;
+      }
 
+      .dev-popup-profile i {
+        font-size: 34px;
+      }
 
-      {% include "video_course.html" %}
-      {% include "live_class.html" %}
-      {% include "test_series.html" %}
-      {% include "e_library.html" %}
-      {% include "product_bundle.html" %}
+      .dev-popup-greeting {
+        font-size: 0.85rem;
+      }
 
+      .dev-popup-name {
+        font-size: 1.15rem;
+      }
 
-      {% render_about_us_section %}
+      .dev-popup-tagline {
+        font-size: 0.8rem;
+      }
 
+      .dev-popup-body {
+        padding: 0 12px 15px;
+      }
 
-      {% endblock content %}
+      .dev-popup-message {
+        padding: 10px;
+      }
 
+      .dev-popup-message p {
+        font-size: 0.78rem;
+      }
 
-      {% block footer %}
-      <!-- Footer -->
-      {% render_footer_section %}
-      {% endblock footer %}
+      .dev-contact-label {
+        font-size: 0.75rem;
+      }
 
+      .dev-contact-value {
+        font-size: 0.8rem;
+      }
 
+      .dev-popup-footer {
+        padding: 12px;
+      }
+
+      .dev-popup-footer-text {
+        font-size: 0.78rem;
+      }
+
+      #pwa-install-btn {
+        bottom: 75px;
+        right: 8px;
+        padding: 9px 18px;
+        font-size: 12px;
+        gap: 6px;
+      }
+
+      #pwa-install-btn i {
+        font-size: 13px;
+      }
+
+      .ios-install-banner {
+        padding: 10px 12px;
+      }
+
+      .ios-install-content h3 {
+        font-size: 13px;
+      }
+
+      .ios-install-content p {
+        font-size: 11px;
+      }
+    }
+  </style>
+    
+</head>
+<body>
+
+    <!-- Developer Info Popup (Dynamic) -->
+    {% render_developer_popup %}
+
+    {% block navbard %}
+    {% include "navbar.html" %}
+    {% include "modal.html" %}
+    {% include "message.html" %}
+    {% endblock navbard %}
+
+    {% block content %}
+    {% render_banner_slider %}
+
+    <!-- Dynamic Stats Section -->
+    {% render_stats_section %}
+    
+    <!-- Dynamic CTA Section -->
+    {% render_cta_section %}
+
+    {% include "video_course.html" %}
+    {% include "live_class.html" %}
+    {% include "test_series.html" %}
+    {% include "e_library.html" %}
+    {% include "product_bundle.html" %}
+
+    {% render_about_us_section %}
+
+    {% endblock content %}
+
+    {% block footer %}
+    <!-- Footer -->
+    {% render_footer_section %}
+    {% endblock footer %}
+
+  <!-- PWA Install Button (shown dynamically on supported browsers) -->
+  <button id="pwa-install-btn" aria-label="Install EduTrellis App">
+    <i class="fa fa-download"></i>
+    <span>Install App</span>
+  </button>
+
+  <!-- iOS Install Banner (shown on iOS devices) -->
+  <div class="ios-install-banner" id="ios-install-banner">
+    <div class="ios-install-content">
+      <h3>📱 Install EduTrellis</h3>
+      <p>Tap <i class="fa fa-share"></i> then "Add to Home Screen"</p>
+    </div>
+    <button class="ios-install-close" id="ios-install-close" aria-label="Close banner">×</button>
+  </div>
+
+  <!-- JavaScript files -->
   <script src="{% static 'js/javascript.js' %}"></script>
+  <script src="{% static 'js/pwainstall.js' %}"></script>
 
-
-  </body>
-  </html>
+</body>
+</html>

@@ -1,3 +1,4 @@
+
 /* Homepage video course and others css not detail one===== VIDEO & LIVE COURSES ===== */
 .course-section, .live-section {
   max-width: 1300px;
@@ -162,6 +163,8 @@
   .slide-arrow2.left { left: 2px; }
   .slide-arrow2.right { right: 2px; }
 }
+
+
 
 /* ===== LOGIN & SIGNUP PAGES ===== */
 /* ===== SHARED BASE STYLES ===== */

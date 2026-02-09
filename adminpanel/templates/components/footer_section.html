@@ -17,53 +17,49 @@
                 <a href="mailto:{{ footer_settings.email }}" class="footer-mail">{{ footer_settings.email }}</a>
             </div>
             
-            <div class="footer-appbadges">
-                {% if footer_settings.google_play_url %}
-                    <a href="{{ footer_settings.google_play_url }}" target="_blank">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get on Play Store" class="footer-badge">
-                    </a>
-                {% endif %}
-                {% if footer_settings.app_store_url %}
-                    <a href="{{ footer_settings.app_store_url }}" target="_blank">
-                        <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Get on App Store" class="footer-badge">
-                    </a>
-                {% endif %}
+            <!-- PWA Install Button (replaces app store badges) -->
+            <div class="footer-install-container">
+                <button id="footer-install-pwa-btn" class="footer-install-btn">
+                    <i class="fa fa-download"></i>
+                    <span>Install Our App</span>
+                </button>
+                <p class="footer-install-description">Get instant access to all courses offline!</p>
             </div>
             
-            <!-- Social Media Links with CORRECT Icon Classes -->
+            <!-- Social Media Links -->
             <div class="footer-social-row">
                 {% if footer_settings.facebook_url %}
-                    <a href="{{ footer_settings.facebook_url }}" class="footer-social social-facebook" title="Facebook" target="_blank">
+                    <a href="{{ footer_settings.facebook_url }}" class="footer-social social-facebook" title="Facebook" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-facebook-f"></i>
                     </a>
                 {% endif %}
                 {% if footer_settings.twitter_url %}
-                    <a href="{{ footer_settings.twitter_url }}" class="footer-social social-twitter" title="Twitter" target="_blank">
+                    <a href="{{ footer_settings.twitter_url }}" class="footer-social social-twitter" title="Twitter" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-twitter"></i>
                     </a>
                 {% endif %}
                 {% if footer_settings.youtube_url %}
-                    <a href="{{ footer_settings.youtube_url }}" class="footer-social social-youtube" title="YouTube" target="_blank">
+                    <a href="{{ footer_settings.youtube_url }}" class="footer-social social-youtube" title="YouTube" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-youtube"></i>
                     </a>
                 {% endif %}
                 {% if footer_settings.linkedin_url %}
-                    <a href="{{ footer_settings.linkedin_url }}" class="footer-social social-linkedin" title="LinkedIn" target="_blank">
+                    <a href="{{ footer_settings.linkedin_url }}" class="footer-social social-linkedin" title="LinkedIn" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-linkedin-in"></i>
                     </a>
                 {% endif %}
                 {% if footer_settings.instagram_url %}
-                    <a href="{{ footer_settings.instagram_url }}" class="footer-social social-instagram" title="Instagram" target="_blank">
+                    <a href="{{ footer_settings.instagram_url }}" class="footer-social social-instagram" title="Instagram" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-instagram"></i>
                     </a>
                 {% endif %}
                 {% if footer_settings.telegram_url %}
-                    <a href="{{ footer_settings.telegram_url }}" class="footer-social social-telegram" title="Telegram" target="_blank">
+                    <a href="{{ footer_settings.telegram_url }}" class="footer-social social-telegram" title="Telegram" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-telegram-plane"></i>
                     </a>
                 {% endif %}
                 {% if footer_settings.whatsapp_url %}
-                    <a href="{{ footer_settings.whatsapp_url }}" class="footer-social social-whatsapp" title="WhatsApp" target="_blank">
+                    <a href="{{ footer_settings.whatsapp_url }}" class="footer-social social-whatsapp" title="WhatsApp" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-whatsapp"></i>
                     </a>
                 {% endif %}
@@ -83,7 +79,7 @@
                 <!-- Special handling for Business section language selector -->
                 {% if section_key == 'business' %}
                     <div class="footer-language">
-                        <select class="footer-selectbox">
+                        <select class="footer-selectbox" aria-label="Select Language">
                             <option>English</option>
                             <option>Hindi</option>
                         </select>
@@ -103,7 +99,6 @@
         {% endif %}
     </div>
 </footer>
-
 
 <style>
 /* Footer styles */
@@ -156,25 +151,60 @@
 
 .footer-mail {
     color: #e8e8e8;
-    text-decoration: none;  /* REMOVED UNDERLINE */
+    text-decoration: none;
     font-size: 1em;
     transition: color 0.3s ease;
 }
 
 .footer-mail:hover {
     color: #ffd067;
-    text-decoration: none;  /* Keep it clean on hover too */
-}
-.footer-appbadges {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
+    text-decoration: none;
 }
 
-.footer-badge {
-    height: 36px;
-    background: #fff;
-    border-radius: 6px;
+/* PWA Install Button in Footer */
+.footer-install-container {
+    margin: 18px 0 14px 0;
+}
+
+.footer-install-btn {
+    background: linear-gradient(135deg, #c7212f 0%, #a01b27 100%);
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(199, 33, 47, 0.3);
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    width: fit-content;
+    margin-bottom: 8px;
+}
+
+.footer-install-btn i {
+    font-size: 16px;
+}
+
+.footer-install-btn:hover {
+    background: linear-gradient(135deg, #a01b27 0%, #8a1722 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(199, 33, 47, 0.4);
+}
+
+.footer-install-btn:active {
+    transform: translateY(0);
+}
+
+.footer-install-description {
+    color: #b8bac3;
+    font-size: 13px;
+    margin: 0;
+    opacity: 0.85;
+    line-height: 1.4;
 }
 
 .footer-social-row {
@@ -210,62 +240,24 @@
 }
 
 /* Social Media Brand Colors */
-.social-facebook {
-    background: #3b5998;
-}
-
-.social-twitter {
-    background: #1da1f2;
-}
-
-.social-youtube {
-    background: #ff0000;
-}
-
-.social-linkedin {
-    background: #0077b5;
-}
-
+.social-facebook { background: #3b5998; }
+.social-twitter { background: #1da1f2; }
+.social-youtube { background: #ff0000; }
+.social-linkedin { background: #0077b5; }
 .social-instagram {
     background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
     color: #fff;
 }
+.social-telegram { background: #0088cc; }
+.social-whatsapp { background: #25d366; }
 
-.social-telegram {
-    background: #0088cc;
-}
-
-.social-whatsapp {
-    background: #25d366;
-}
-
-.footer-social:hover.social-facebook {
-    background: #2d4373;
-}
-
-.footer-social:hover.social-twitter {
-    background: #1a8cd8;
-}
-
-.footer-social:hover.social-youtube {
-    background: #cc0000;
-}
-
-.footer-social:hover.social-linkedin {
-    background: #005582;
-}
-
-.footer-social:hover.social-instagram {
-    background: #c13584;
-}
-
-.footer-social:hover.social-telegram {
-    background: #0077b5;
-}
-
-.footer-social:hover.social-whatsapp {
-    background: #128c7e;
-}
+.footer-social:hover.social-facebook { background: #2d4373; }
+.footer-social:hover.social-twitter { background: #1a8cd8; }
+.footer-social:hover.social-youtube { background: #cc0000; }
+.footer-social:hover.social-linkedin { background: #005582; }
+.footer-social:hover.social-instagram { background: #c13584; }
+.footer-social:hover.social-telegram { background: #0077b5; }
+.footer-social:hover.social-whatsapp { background: #128c7e; }
 
 .footer-links-col {
     min-width: 158px;
@@ -307,6 +299,7 @@
     padding: 6px 14px;
     font-size: 1em;
     border: 1px solid #383939;
+    cursor: pointer;
 }
 
 .footer-legal {
@@ -337,6 +330,7 @@
     margin: 0 5px;
 }
 
+/* Tablet & Mobile Responsive */
 @media (max-width: 900px) {
     .footer-inner {
         flex-direction: column;
@@ -347,6 +341,211 @@
     .footer-links-col {
         min-width: 0;
     }
+    
+    .footer-install-btn {
+        width: 100%;
+        justify-content: center;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-inner {
+        padding: 0 20px;
+    }
+    
+    .footer-logo-img {
+        height: 50px;
+    }
+    
+    .footer-install-btn {
+        padding: 11px 20px;
+        font-size: 14px;
+    }
+    
+    .footer-install-btn i {
+        font-size: 14px;
+    }
+    
+    .footer-install-description {
+        font-size: 12px;
+    }
+    
+    .footer-social {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .footer-social i {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 360px) {
+    .footer-inner {
+        padding: 0 15px;
+    }
+    
+    .footer-logo-img {
+        height: 45px;
+    }
+    
+    .footer-install-btn {
+        padding: 10px 18px;
+        font-size: 13px;
+    }
+    
+    .footer-install-btn i {
+        font-size: 13px;
+    }
 }
 </style>
+
+<!-- Footer PWA Install Script (Self-contained) -->
+<script>
+(function() {
+  'use strict';
+  
+  // Wait for DOM to be fully loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFooterPWA);
+  } else {
+    initFooterPWA();
+  }
+  
+  function initFooterPWA() {
+    const footerInstallBtn = document.getElementById('footer-install-pwa-btn');
+    
+    if (!footerInstallBtn) {
+      console.log('⚠️ Footer install button not found');
+      return;
+    }
+    
+    console.log('🚀 Footer PWA handler initialized');
+    
+    let footerDeferredPrompt = null;
+    
+    // Check if app is already installed
+    function isAppInstalled() {
+      return window.matchMedia('(display-mode: standalone)').matches || 
+             window.navigator.standalone === true;
+    }
+    
+    // Detect iOS
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (event) => {
+      console.log('💡 Footer: beforeinstallprompt event fired');
+      
+      // Prevent default
+      event.preventDefault();
+      
+      // Save the event
+      footerDeferredPrompt = event;
+      
+      // Show button if app not installed
+      if (!isAppInstalled()) {
+        footerInstallBtn.style.display = 'flex';
+        console.log('✅ Footer install button shown');
+      }
+    });
+    
+    // Handle footer install button click
+    footerInstallBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log('🖱️ Footer install button clicked');
+      
+      if (!footerDeferredPrompt) {
+        console.log('❌ Footer: deferredPrompt is NULL');
+        
+        // Show helpful message
+        if (isIOS()) {
+          alert('To install on iOS:\n\n1. Tap the Share button (⬆️)\n2. Select "Add to Home Screen"\n3. Tap "Add"');
+        } else {
+          alert('Installation not available:\n\n• Use Chrome, Edge, or Samsung Internet on Android\n• Make sure you are on HTTPS\n• Clear cache and reload if needed');
+        }
+        return;
+      }
+      
+      console.log('✅ Showing install prompt...');
+      
+      // Hide button temporarily
+      footerInstallBtn.style.display = 'none';
+      
+      try {
+        // Show the install prompt
+        await footerDeferredPrompt.prompt();
+        
+        // Wait for user response
+        const { outcome } = await footerDeferredPrompt.userChoice;
+        console.log(`👤 Footer: User response: ${outcome}`);
+        
+        if (outcome === 'accepted') {
+          console.log('✅ User accepted installation from footer');
+          
+          // Track in analytics if available
+          if (typeof gtag !== 'undefined') {
+            gtag('event', 'pwa_installed_footer', {
+              'event_category': 'PWA',
+              'event_label': 'Installed from Footer'
+            });
+          }
+        } else {
+          console.log('❌ User dismissed installation');
+          
+          // Show button again after 3 seconds
+          setTimeout(function() {
+            if (!isAppInstalled()) {
+              footerInstallBtn.style.display = 'flex';
+              console.log('🔄 Footer button shown again');
+            }
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('❌ Installation error:', error);
+      }
+      
+      // Clear deferred prompt
+      footerDeferredPrompt = null;
+    });
+    
+    // Handle app installed event
+    window.addEventListener('appinstalled', function(event) {
+      console.log('🎉 Footer: PWA installed successfully!');
+      
+      // Hide button
+      footerInstallBtn.style.display = 'none';
+      
+      // Clear deferred prompt
+      footerDeferredPrompt = null;
+      
+      // Show success message
+      setTimeout(function() {
+        alert('🎉 App installed successfully! You can now access EduTrellis from your home screen.');
+      }, 500);
+    });
+    
+    // Hide button if app already installed
+    if (isAppInstalled()) {
+      footerInstallBtn.style.display = 'none';
+      console.log('✅ Footer: App already installed - button hidden');
+    }
+    
+    // For testing on localhost - show button immediately
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      setTimeout(function() {
+        if (!isAppInstalled() && footerInstallBtn) {
+          footerInstallBtn.style.display = 'flex';
+          console.log('🧪 Test mode: Footer button shown');
+        }
+      }, 1000);
+    }
+  }
+})();
+</script>
 {% endif %}

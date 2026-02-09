@@ -1,0 +1,251 @@
+{% extends "admin_dashboard.html" %}
+{% block content %}
+      {% include "message.html" %}
+<div class="wrapper">
+    <!-- Navigation Buttons -->
+    <div class="nav-buttons">
+        <a href="{% url 'adminnotifications' %}" class="btn">
+            <span>←</span>
+            <span>Back to Notifications</span>
+        </a>
+    </div>
+    <div class="h1">{{ action }} Notification</div>
+    <div class="small">
+        Create a new system notification for users. The notification will be created with the current timestamp.
+    </div>
+
+    <form method="post" id="notificationForm">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="panel">
+            <legend>Notification Details</legend>
+            <div class="grid">
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="{{ form.title.id_for_label }}">
+                            Notification Title <span class="required">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="errorlist">
+                                {% for error in form.title.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="help-text">A clear, concise title for the notification</div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="{{ form.body.id_for_label }}">
+                            Message Body <span class="required">*</span>
+                        </label>
+                        {{ form.body }}
+                        {% if form.body.errors %}
+                            <div class="errorlist">
+                                {% for error in form.body.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="help-text">The main content of your notification</div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="{{ form.link.id_for_label }}">Link (Optional)</label>
+                        {{ form.link }}
+                        {% if form.link.errors %}
+                            <div class="errorlist">
+                                {% for error in form.link.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="help-text">Optional URL to redirect users when clicking the notification</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="panel preview-panel">
+            <legend>Preview</legend>
+            <div class="notification-preview">
+                <div class="preview-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="preview-content">
+                    <div class="preview-title" id="previewTitle">Your notification title will appear here</div>
+                    <div class="preview-body" id="previewBody">Your notification message will appear here</div>
+                    <div class="preview-link" id="previewLink" style="display: none;">
+                        <i class="fas fa-link"></i> <span id="previewLinkText"></span>
+                    </div>
+                    <div class="preview-time">
+                        <i class="fas fa-clock"></i> Will be created at: <span id="currentTime"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Errors (Non-field errors) -->
+        {% if form.non_field_errors %}
+            <div class="panel" style="border-color: #dc2626; background: #fef2f2;">
+                <div class="errorlist">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="panel actions">
+            <button type="submit" class="btn btn-primary" id="saveBtn">
+                <span class="btn-icon">💾</span>
+                <span class="btn-text">{{ action }} Notification</span>
+            </button>
+            <a href="{% url 'adminnotifications' %}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.preview-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.preview-panel legend {
+    color: white;
+}
+
+.notification-preview {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.preview-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.preview-content {
+    flex: 1;
+}
+
+.preview-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.preview-body {
+    font-size: 14px;
+    opacity: 0.9;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.preview-link {
+    font-size: 13px;
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.preview-time {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.required {
+    color: #f56565;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update current time display
+    function updateCurrentTime() {
+        const now = new Date();
+        const formatted = now.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        document.getElementById('currentTime').textContent = formatted;
+    }
+    
+    // Update time every second
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
+
+    // Form submission with loading state
+    document.getElementById('notificationForm').addEventListener('submit', function(e) {
+        const btn = document.getElementById('saveBtn');
+        const icon = btn.querySelector('.btn-icon');
+        const text = btn.querySelector('.btn-text');
+        
+        btn.classList.add('btn-loading');
+        icon.innerHTML = '<div class="spinner"></div>';
+        text.textContent = '{{ action }}ing...';
+        btn.disabled = true;
+    });
+
+    // Live Preview
+    const titleInput = document.getElementById('id_title');
+    const bodyInput = document.getElementById('id_body');
+    const linkInput = document.getElementById('id_link');
+    
+    const previewTitle = document.getElementById('previewTitle');
+    const previewBody = document.getElementById('previewBody');
+    const previewLink = document.getElementById('previewLink');
+    const previewLinkText = document.getElementById('previewLinkText');
+
+    function updatePreview() {
+        previewTitle.textContent = titleInput.value || 'Your notification title will appear here';
+        previewBody.textContent = bodyInput.value || 'Your notification message will appear here';
+        
+        if (linkInput.value) {
+            previewLink.style.display = 'flex';
+            previewLinkText.textContent = linkInput.value;
+        } else {
+            previewLink.style.display = 'none';
+        }
+    }
+
+    titleInput.addEventListener('input', updatePreview);
+    bodyInput.addEventListener('input', updatePreview);
+    linkInput.addEventListener('input', updatePreview);
+
+    // Initialize preview
+    updatePreview();
+});
+</script>
+
+{% endblock %}

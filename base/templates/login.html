@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
 
-
 {% block content %}
 {% include 'message.html' %}
 
@@ -33,6 +32,207 @@
     transform: rotate(360deg);
   }
 }
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+}
+
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-modal:hover {
+  color: #333;
+}
+
+.message {
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.message.error {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.message.success {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.cancel-btn {
+  background: transparent;
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.cancel-btn:hover {
+  background: #f5f5f5;
+}
+
+.resend-link {
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 10px;
+  text-decoration: underline;
+}
+
+.resend-link:hover {
+  color: #1d4ed8;
+}
+
+.resend-link:disabled {
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Form overlay */
+#formOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.login-form {
+  position: relative;
+}
+
+/* Password Field Container */
+.password-field-container {
+  position: relative;
+}
+
+.password-field-container input {
+  padding-right: 45px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: color 0.2s ease;
+}
+
+.password-toggle-btn:hover {
+  color: #333;
+}
+
+.password-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Show Password Checkbox Style */
+.show-password {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+  user-select: none;
+}
+
+.show-password input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.show-password span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.show-password .eye-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Password Strength Indicator */
+.password-hint {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Input Focus Enhancement */
+.form-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Secure Login Badge */
+.secure-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.secure-badge svg {
+  width: 14px;
+  height: 14px;
+  color: #16a34a;
+}
 </style>
 
 <div class="login-background">
@@ -56,13 +256,32 @@
           
           <div class="form-field">
             <label for="idpassword">Password</label>
-            <input type="password" name="password" id="idpassword" autocomplete="current-password" required placeholder="Enter your password">
+            <div class="password-field-container">
+              <input type="password" name="password" id="idpassword" autocomplete="current-password" required placeholder="Enter your password">
+              <button type="button" class="password-toggle-btn" id="togglePasswordBtn" title="Show password" aria-label="Toggle password visibility">
+                <!-- Eye Icon (Show) -->
+                <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <!-- Eye Off Icon (Hide) - Hidden by default -->
+                <svg class="eye-closed" style="display:none;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+              </button>
+            </div>
           </div>
           
           <div class="login-row">
-            <label class="remember-me">
-              <input type="checkbox" name="remember" id="rememberme">
-              <span>Remember me</span>
+            <label class="show-password">
+              <input type="checkbox" id="showPasswordCheckbox">
+              <span>
+                <svg class="eye-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Show password
+              </span>
             </label>
             <a href="#" class="forgot-password" id="forgotPasswordBtn">Forgot password?</a>
           </div>
@@ -78,10 +297,18 @@
           <div class="login-signup">
             Don't have an account? <a href="{% url 'signup' %}">Sign up</a>
           </div>
+          
+          <!-- Secure Login Badge -->
+          <div class="secure-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span>Secure login with 256-bit encryption</span>
+          </div>
         </div>
         
         <!-- Form overlay while submitting -->
-        <div id="formOverlay" style="display:none">
+        <div id="formOverlay" style="display:none;">
           <div class="overlay-spinner">
             <span class="spinner"></span>
           </div>
@@ -89,19 +316,18 @@
       </form>
     </div>
     
-    <div class="login-image" aria-hidden="true">
-      <picture>
-        <source media="(min-width: 960px)" srcset="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1600&auto=format&fit=crop">
-        <source media="(min-width: 600px)" srcset="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200&auto=format&fit=crop">
-        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=900&auto=format&fit=crop" alt="Login illustration">
-      </picture>
-    </div>
+<div class="login-image" aria-hidden="true">
+  <picture>
+    <source media="(min-width: 960px)" srcset="{% static 'img/loginformimg.jpg' %}">
+    <source media="(min-width: 600px)" srcset="{% static 'img/loginformimg.jpg' %}">
+    <img src="{% static 'img/loginformimg.jpg' %}" alt="Login illustration">
+  </picture>
+</div>
   </div>
 </div>
 
-
 <!-- Forgot Password Modal -->
-<div id="forgotPasswordModal" class="modal" style="display:none">
+<div id="forgotPasswordModal" class="modal" style="display:none;">
   <div class="modal-content">
     <span class="close-modal" id="closeModal">&times;</span>
     
@@ -123,11 +349,11 @@
       </button>
       
       <button type="button" class="cancel-btn" id="cancelStep1Btn">Cancel</button>
-      <div id="forgotMessage" class="message" style="margin-top:12px"></div>
+      <div id="forgotMessage" class="message" style="margin-top:12px; display:none;"></div>
     </div>
     
     <!-- Step 2: Verify OTP -->
-    <div id="forgotStep2" class="modal-step" style="display:none">
+    <div id="forgotStep2" class="modal-step" style="display:none;">
       <h2>Verify OTP</h2>
       <p>Enter the 6-digit OTP sent to your email</p>
       
@@ -145,22 +371,45 @@
       
       <button type="button" class="resend-link" id="resendOtpBtn">Resend OTP</button>
       <button type="button" class="cancel-btn" id="cancelStep2Btn">Cancel</button>
-      <div id="otpMessage" class="message" style="margin-top:12px"></div>
+      <div id="otpMessage" class="message" style="margin-top:12px; display:none;"></div>
     </div>
     
     <!-- Step 3: Reset Password -->
-    <div id="forgotStep3" class="modal-step" style="display:none">
+    <div id="forgotStep3" class="modal-step" style="display:none;">
       <h2>Set New Password</h2>
       <p>Enter your new password</p>
       
       <div class="form-field">
         <label for="newPassword">New Password</label>
-        <input type="password" id="newPassword" name="newpassword" autocomplete="new-password" required placeholder="At least 8 characters">
+        <div class="password-field-container">
+          <input type="password" id="newPassword" name="newpassword" autocomplete="new-password" required placeholder="At least 8 characters">
+          <button type="button" class="password-toggle-btn" id="toggleNewPasswordBtn" title="Show password">
+            <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <svg class="eye-closed" style="display:none;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+          </button>
+        </div>
+        <div class="password-hint">Use 8+ characters with letters and numbers</div>
       </div>
       
       <div class="form-field">
         <label for="confirmPassword">Confirm Password</label>
-        <input type="password" id="confirmPassword" name="confirmpassword" autocomplete="new-password" required placeholder="Re-enter password">
+        <div class="password-field-container">
+          <input type="password" id="confirmPassword" name="confirmpassword" autocomplete="new-password" required placeholder="Re-enter password">
+          <button type="button" class="password-toggle-btn" id="toggleConfirmPasswordBtn" title="Show password">
+            <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <svg class="eye-closed" style="display:none;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+          </button>
+        </div>
       </div>
       
       <button type="button" class="login-btn" id="resetPasswordBtn">
@@ -171,23 +420,160 @@
       </button>
       
       <button type="button" class="cancel-btn" id="cancelStep3Btn">Cancel</button>
-      <div id="resetMessage" class="message" style="margin-top:12px"></div>
+      <div id="resetMessage" class="message" style="margin-top:12px; display:none;"></div>
     </div>
   </div>
 </div>
 
-
 <script>
 (function() {
+  'use strict';
+  
+  // =====================
+  // CSRF Token Helper
+  // =====================
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  
+  function getCSRFToken() {
+    const cookieToken = getCookie('csrftoken');
+    if (cookieToken) return cookieToken;
+    
+    const inputToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    return inputToken ? inputToken.value : '';
+  }
+  
+  const csrftoken = getCSRFToken();
+  
+  // =====================
+  // DOM Elements
+  // =====================
   const form = document.getElementById('loginForm');
   const submitBtn = document.getElementById('loginSubmitBtn');
-  const btnLabel = submitBtn?.querySelector('.btn-label');
+  const btnLabel = submitBtn ? submitBtn.querySelector('.btn-label') : null;
   const btnSpinner = document.getElementById('loginBtnSpinner');
   const overlay = document.getElementById('formOverlay');
   
-  // Login form submission
+  const modal = document.getElementById('forgotPasswordModal');
+  const forgotBtn = document.getElementById('forgotPasswordBtn');
+  const closeModalBtn = document.getElementById('closeModal');
+  const step1 = document.getElementById('forgotStep1');
+  const step2 = document.getElementById('forgotStep2');
+  const step3 = document.getElementById('forgotStep3');
+  
+  let currentUserId = null;
+  
+  // =====================
+  // Password Toggle Function
+  // =====================
+  function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    const eyeOpen = button.querySelector('.eye-open');
+    const eyeClosed = button.querySelector('.eye-closed');
+    
+    if (input.type === 'password') {
+      input.type = 'text';
+      button.title = 'Hide password';
+      if (eyeOpen) eyeOpen.style.display = 'none';
+      if (eyeClosed) eyeClosed.style.display = 'block';
+    } else {
+      input.type = 'password';
+      button.title = 'Show password';
+      if (eyeOpen) eyeOpen.style.display = 'block';
+      if (eyeClosed) eyeClosed.style.display = 'none';
+    }
+  }
+  
+  // =====================
+  // Login Password Toggle (Eye Icon Button)
+  // =====================
+  const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+  if (togglePasswordBtn) {
+    togglePasswordBtn.addEventListener('click', function() {
+      togglePasswordVisibility('idpassword', this);
+      
+      // Sync checkbox state
+      const checkbox = document.getElementById('showPasswordCheckbox');
+      const passwordInput = document.getElementById('idpassword');
+      if (checkbox && passwordInput) {
+        checkbox.checked = (passwordInput.type === 'text');
+      }
+    });
+  }
+  
+  // =====================
+  // Login Password Toggle (Checkbox)
+  // =====================
+  const showPasswordCheckbox = document.getElementById('showPasswordCheckbox');
+  if (showPasswordCheckbox) {
+    showPasswordCheckbox.addEventListener('change', function() {
+      const passwordInput = document.getElementById('idpassword');
+      const toggleBtn = document.getElementById('togglePasswordBtn');
+      
+      if (!passwordInput) return;
+      
+      const eyeOpen = toggleBtn ? toggleBtn.querySelector('.eye-open') : null;
+      const eyeClosed = toggleBtn ? toggleBtn.querySelector('.eye-closed') : null;
+      
+      if (this.checked) {
+        passwordInput.type = 'text';
+        if (toggleBtn) toggleBtn.title = 'Hide password';
+        if (eyeOpen) eyeOpen.style.display = 'none';
+        if (eyeClosed) eyeClosed.style.display = 'block';
+      } else {
+        passwordInput.type = 'password';
+        if (toggleBtn) toggleBtn.title = 'Show password';
+        if (eyeOpen) eyeOpen.style.display = 'block';
+        if (eyeClosed) eyeClosed.style.display = 'none';
+      }
+    });
+  }
+  
+  // =====================
+  // Modal Password Toggles
+  // =====================
+  const toggleNewPasswordBtn = document.getElementById('toggleNewPasswordBtn');
+  if (toggleNewPasswordBtn) {
+    toggleNewPasswordBtn.addEventListener('click', function() {
+      togglePasswordVisibility('newPassword', this);
+    });
+  }
+  
+  const toggleConfirmPasswordBtn = document.getElementById('toggleConfirmPasswordBtn');
+  if (toggleConfirmPasswordBtn) {
+    toggleConfirmPasswordBtn.addEventListener('click', function() {
+      togglePasswordVisibility('confirmPassword', this);
+    });
+  }
+  
+  // =====================
+  // Login Form Submission
+  // =====================
   if (form) {
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function(e) {
+      const email = document.getElementById('idemail').value.trim();
+      const password = document.getElementById('idpassword').value;
+      
+      if (!email || !password) {
+        e.preventDefault();
+        alert('Please enter both email and password.');
+        return;
+      }
+      
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.classList.add('is-loading');
@@ -198,273 +584,390 @@
     });
   }
   
-  // Forgot Password Modal
-  const modal = document.getElementById('forgotPasswordModal');
-  const forgotBtn = document.getElementById('forgotPasswordBtn');
-  const closeModal = document.getElementById('closeModal');
-  const step1 = document.getElementById('forgotStep1');
-  const step2 = document.getElementById('forgotStep2');
-  const step3 = document.getElementById('forgotStep3');
-  let currentUserId = null;
-  
-  // Open modal
-  forgotBtn?.addEventListener('click', function(e) {
-    e.preventDefault();
-    modal.style.display = 'flex';
-    resetModal();
-  });
-  
-  // Close modal
-  function closeModalFunc() {
-    modal.style.display = 'none';
-    resetModal();
+  // =====================
+  // Modal Functions
+  // =====================
+  function openModal() {
+    if (modal) {
+      modal.style.display = 'flex';
+      resetModal();
+      document.getElementById('resetEmail').focus();
+    }
   }
   
-  // Close modal handlers
-  closeModal?.addEventListener('click', closeModalFunc);
-  document.getElementById('cancelStep1Btn')?.addEventListener('click', closeModalFunc);
-  document.getElementById('cancelStep2Btn')?.addEventListener('click', closeModalFunc);
-  document.getElementById('cancelStep3Btn')?.addEventListener('click', closeModalFunc);
-  
-  window.addEventListener('click', function(e) {
-    if (e.target === modal) closeModalFunc();
-  });
-  
-  // ESC key to close modal
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && modal.style.display === 'flex') {
-      closeModalFunc();
+  function closeModal() {
+    if (modal) {
+      modal.style.display = 'none';
+      resetModal();
     }
-  });
+  }
   
   function resetModal() {
-    step1.style.display = 'block';
-    step2.style.display = 'none';
-    step3.style.display = 'none';
-    document.getElementById('resetEmail').value = '';
-    document.getElementById('resetOtp').value = '';
-    document.getElementById('newPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
+    if (step1) step1.style.display = 'block';
+    if (step2) step2.style.display = 'none';
+    if (step3) step3.style.display = 'none';
+    
+    const resetEmail = document.getElementById('resetEmail');
+    const resetOtp = document.getElementById('resetOtp');
+    const newPassword = document.getElementById('newPassword');
+    const confirmPassword = document.getElementById('confirmPassword');
+    
+    if (resetEmail) resetEmail.value = '';
+    if (resetOtp) resetOtp.value = '';
+    if (newPassword) {
+      newPassword.value = '';
+      newPassword.type = 'password';
+    }
+    if (confirmPassword) {
+      confirmPassword.value = '';
+      confirmPassword.type = 'password';
+    }
+    
+    // Reset eye icons in modal
+    [toggleNewPasswordBtn, toggleConfirmPasswordBtn].forEach(function(btn) {
+      if (btn) {
+        const eyeOpen = btn.querySelector('.eye-open');
+        const eyeClosed = btn.querySelector('.eye-closed');
+        if (eyeOpen) eyeOpen.style.display = 'block';
+        if (eyeClosed) eyeClosed.style.display = 'none';
+        btn.title = 'Show password';
+      }
+    });
+    
     currentUserId = null;
-    hideMessages();
+    hideAllMessages();
   }
   
-  function hideMessages() {
-    ['forgotMessage', 'otpMessage', 'resetMessage'].forEach(id => {
+  function hideAllMessages() {
+    ['forgotMessage', 'otpMessage', 'resetMessage'].forEach(function(id) {
       const el = document.getElementById(id);
       if (el) {
         el.style.display = 'none';
+        el.textContent = '';
         el.className = 'message';
       }
     });
   }
   
-  function showMessage(elementId, message, isError = false) {
+  function showMessage(elementId, message, isError) {
     const el = document.getElementById(elementId);
     if (el) {
       el.textContent = message;
-      el.className = `message ${isError ? 'error' : 'success'}`;
+      el.className = 'message ' + (isError ? 'error' : 'success');
       el.style.display = 'block';
     }
   }
   
-  function setButtonLoading(button, loading) {
+  function setButtonLoading(button, isLoading) {
+    if (!button) return;
+    
     const label = button.querySelector('.btn-label');
     const spinner = button.querySelector('.btn-spinner');
-    button.disabled = loading;
-    if (spinner) spinner.style.display = loading ? 'inline-flex' : 'none';
+    
+    button.disabled = isLoading;
+    
+    if (spinner) {
+      spinner.style.display = isLoading ? 'inline-flex' : 'none';
+    }
   }
   
+  // =====================
+  // Modal Event Listeners
+  // =====================
+  if (forgotBtn) {
+    forgotBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      openModal();
+    });
+  }
+  
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', closeModal);
+  }
+  
+  ['cancelStep1Btn', 'cancelStep2Btn', 'cancelStep3Btn'].forEach(function(id) {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', closeModal);
+    }
+  });
+  
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+  }
+  
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+      closeModal();
+    }
+  });
+  
+  // =====================
   // Step 1: Send OTP
-  document.getElementById('sendOtpBtn')?.addEventListener('click', async function() {
-    const email = document.getElementById('resetEmail').value.trim();
-    if (!email) {
-      showMessage('forgotMessage', 'Please enter your email', true);
-      return;
-    }
-    
-    setButtonLoading(this, true);
-    hideMessages();
-    
-    try {
-      const response = await fetch("{% url 'forgot_password_request' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `email=${encodeURIComponent(email)}`
-      });
+  // =====================
+  const sendOtpBtn = document.getElementById('sendOtpBtn');
+  if (sendOtpBtn) {
+    sendOtpBtn.addEventListener('click', async function() {
+      const emailInput = document.getElementById('resetEmail');
+      const email = emailInput ? emailInput.value.trim() : '';
       
-      const data = await response.json();
-      
-      if (data.success) {
-        currentUserId = data.userid;
-        showMessage('forgotMessage', data.message, false);
-        setTimeout(() => {
-          step1.style.display = 'none';
-          step2.style.display = 'block';
-          hideMessages();
-          document.getElementById('resetOtp').focus();
-        }, 1500);
-      } else {
-        showMessage('forgotMessage', data.message, true);
+      if (!email) {
+        showMessage('forgotMessage', 'Please enter your email', true);
+        return;
       }
-    } catch (error) {
-      showMessage('forgotMessage', 'An error occurred. Please try again.', true);
-    } finally {
-      setButtonLoading(this, false);
-    }
-  });
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showMessage('forgotMessage', 'Please enter a valid email address', true);
+        return;
+      }
+      
+      setButtonLoading(this, true);
+      hideAllMessages();
+      
+      try {
+        const response = await fetch("{% url 'forgot_password_request' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+          },
+          body: 'email=' + encodeURIComponent(email)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          currentUserId = data.userid;
+          showMessage('forgotMessage', data.message, false);
+          
+          setTimeout(function() {
+            if (step1) step1.style.display = 'none';
+            if (step2) step2.style.display = 'block';
+            hideAllMessages();
+            
+            const otpInput = document.getElementById('resetOtp');
+            if (otpInput) otpInput.focus();
+          }, 1500);
+        } else {
+          showMessage('forgotMessage', data.message, true);
+        }
+      } catch (error) {
+        console.error('Send OTP error:', error);
+        showMessage('forgotMessage', 'An error occurred. Please try again.', true);
+      } finally {
+        setButtonLoading(this, false);
+      }
+    });
+  }
   
+  // =====================
   // Step 2: Verify OTP
-  document.getElementById('verifyOtpBtn')?.addEventListener('click', async function() {
-    const otp = document.getElementById('resetOtp').value.trim();
-    if (!otp || otp.length !== 6) {
-      showMessage('otpMessage', 'Please enter a valid 6-digit OTP', true);
-      return;
-    }
-    
-    setButtonLoading(this, true);
-    hideMessages();
-    
-    try {
-      const response = await fetch("{% url 'verify_reset_otp' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `userid=${currentUserId}&otpcode=${encodeURIComponent(otp)}`
-      });
+  // =====================
+  const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+  if (verifyOtpBtn) {
+    verifyOtpBtn.addEventListener('click', async function() {
+      const otpInput = document.getElementById('resetOtp');
+      const otp = otpInput ? otpInput.value.trim() : '';
       
-      const data = await response.json();
-      
-      if (data.success) {
-        showMessage('otpMessage', data.message, false);
-        setTimeout(() => {
-          step2.style.display = 'none';
-          step3.style.display = 'block';
-          hideMessages();
-          document.getElementById('newPassword').focus();
-        }, 1000);
-      } else {
-        showMessage('otpMessage', data.message, true);
+      if (!otp || otp.length !== 6) {
+        showMessage('otpMessage', 'Please enter a valid 6-digit OTP', true);
+        return;
       }
-    } catch (error) {
-      showMessage('otpMessage', 'An error occurred. Please try again.', true);
-    } finally {
-      setButtonLoading(this, false);
-    }
-  });
+      
+      if (!/^\d{6}$/.test(otp)) {
+        showMessage('otpMessage', 'OTP must contain only numbers', true);
+        return;
+      }
+      
+      setButtonLoading(this, true);
+      hideAllMessages();
+      
+      try {
+        const response = await fetch("{% url 'verify_reset_otp' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+          },
+          body: 'userid=' + encodeURIComponent(currentUserId) + '&otpcode=' + encodeURIComponent(otp)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showMessage('otpMessage', data.message, false);
+          
+          setTimeout(function() {
+            if (step2) step2.style.display = 'none';
+            if (step3) step3.style.display = 'block';
+            hideAllMessages();
+            
+            const newPwdInput = document.getElementById('newPassword');
+            if (newPwdInput) newPwdInput.focus();
+          }, 1000);
+        } else {
+          showMessage('otpMessage', data.message, true);
+        }
+      } catch (error) {
+        console.error('Verify OTP error:', error);
+        showMessage('otpMessage', 'An error occurred. Please try again.', true);
+      } finally {
+        setButtonLoading(this, false);
+      }
+    });
+  }
   
+  // =====================
   // Resend OTP
-  document.getElementById('resendOtpBtn')?.addEventListener('click', async function() {
-    const email = document.getElementById('resetEmail').value.trim();
-    const sendBtn = document.getElementById('sendOtpBtn');
-    
-    this.disabled = true;
-    this.textContent = 'Sending...';
-    hideMessages();
-    
-    try {
-      const response = await fetch("{% url 'forgot_password_request' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `email=${encodeURIComponent(email)}`
-      });
+  // =====================
+  const resendOtpBtn = document.getElementById('resendOtpBtn');
+  if (resendOtpBtn) {
+    resendOtpBtn.addEventListener('click', async function() {
+      const emailInput = document.getElementById('resetEmail');
+      const email = emailInput ? emailInput.value.trim() : '';
       
-      const data = await response.json();
-      
-      if (data.success && data.userid) {
-        currentUserId = data.userid;
+      if (!email) {
+        showMessage('otpMessage', 'Email not found. Please start over.', true);
+        return;
       }
-      showMessage('otpMessage', data.success ? 'OTP resent successfully!' : data.message, !data.success);
-    } catch (error) {
-      showMessage('otpMessage', 'Failed to resend OTP', true);
-    } finally {
-      this.disabled = false;
-      this.textContent = 'Resend OTP';
-    }
-  });
+      
+      this.disabled = true;
+      const originalText = this.textContent;
+      this.textContent = 'Sending...';
+      hideAllMessages();
+      
+      try {
+        const response = await fetch("{% url 'forgot_password_request' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+          },
+          body: 'email=' + encodeURIComponent(email)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.userid) {
+          currentUserId = data.userid;
+          showMessage('otpMessage', 'OTP resent successfully!', false);
+        } else {
+          showMessage('otpMessage', data.message || 'Failed to resend OTP', true);
+        }
+      } catch (error) {
+        console.error('Resend OTP error:', error);
+        showMessage('otpMessage', 'Failed to resend OTP. Please try again.', true);
+      } finally {
+        this.disabled = false;
+        this.textContent = originalText;
+      }
+    });
+  }
   
+  // =====================
   // Step 3: Reset Password
-  document.getElementById('resetPasswordBtn')?.addEventListener('click', async function() {
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    
-    if (!newPassword || !confirmPassword) {
-      showMessage('resetMessage', 'Please fill in all fields', true);
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      showMessage('resetMessage', 'Passwords do not match', true);
-      return;
-    }
-    
-    if (newPassword.length < 8) {
-      showMessage('resetMessage', 'Password must be at least 8 characters', true);
-      return;
-    }
-    
-    setButtonLoading(this, true);
-    hideMessages();
-    
-    try {
-      const response = await fetch("{% url 'reset_password' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: `newpassword=${encodeURIComponent(newPassword)}&confirmpassword=${encodeURIComponent(confirmPassword)}`
-      });
+  // =====================
+  const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+  if (resetPasswordBtn) {
+    resetPasswordBtn.addEventListener('click', async function() {
+      const newPwdInput = document.getElementById('newPassword');
+      const confirmPwdInput = document.getElementById('confirmPassword');
       
-      const data = await response.json();
+      const newPassword = newPwdInput ? newPwdInput.value : '';
+      const confirmPassword = confirmPwdInput ? confirmPwdInput.value : '';
       
-      if (data.success) {
-        showMessage('resetMessage', data.message + ' Redirecting...', false);
-        setTimeout(() => {
-          modal.style.display = 'none';
-          window.location.href = "{% url 'login' %}";
-        }, 2000);
-      } else {
-        showMessage('resetMessage', data.message, true);
+      if (!newPassword || !confirmPassword) {
+        showMessage('resetMessage', 'Please fill in all fields', true);
+        return;
       }
-    } catch (error) {
-      showMessage('resetMessage', 'An error occurred. Please try again.', true);
-    } finally {
-      setButtonLoading(this, false);
-    }
-  });
+      
+      if (newPassword.length < 8) {
+        showMessage('resetMessage', 'Password must be at least 8 characters', true);
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        showMessage('resetMessage', 'Passwords do not match', true);
+        return;
+      }
+      
+      setButtonLoading(this, true);
+      hideAllMessages();
+      
+      try {
+        const response = await fetch("{% url 'reset_password' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+          },
+          body: 'newpassword=' + encodeURIComponent(newPassword) + '&confirmpassword=' + encodeURIComponent(confirmPassword)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showMessage('resetMessage', data.message + ' Redirecting to login...', false);
+          
+          setTimeout(function() {
+            closeModal();
+            window.location.href = "{% url 'login' %}";
+          }, 2000);
+        } else {
+          showMessage('resetMessage', data.message, true);
+        }
+      } catch (error) {
+        console.error('Reset password error:', error);
+        showMessage('resetMessage', 'An error occurred. Please try again.', true);
+      } finally {
+        setButtonLoading(this, false);
+      }
+    });
+  }
   
-  // Allow Enter key to submit in each step
-  document.getElementById('resetEmail')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('sendOtpBtn').click();
-    }
-  });
+  // =====================
+  // Enter Key Handlers
+  // =====================
+  const resetEmailInput = document.getElementById('resetEmail');
+  if (resetEmailInput) {
+    resetEmailInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (sendOtpBtn) sendOtpBtn.click();
+      }
+    });
+  }
   
-  document.getElementById('resetOtp')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('verifyOtpBtn').click();
-    }
-  });
+  const resetOtpInput = document.getElementById('resetOtp');
+  if (resetOtpInput) {
+    resetOtpInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (verifyOtpBtn) verifyOtpBtn.click();
+      }
+    });
+    
+    resetOtpInput.addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+  }
   
-  document.getElementById('confirmPassword')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('resetPasswordBtn').click();
-    }
-  });
+  const confirmPwdInput = document.getElementById('confirmPassword');
+  if (confirmPwdInput) {
+    confirmPwdInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (resetPasswordBtn) resetPasswordBtn.click();
+      }
+    });
+  }
+  
 })();
 </script>
-
 
 {% endblock content %}

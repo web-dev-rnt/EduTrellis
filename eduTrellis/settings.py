@@ -149,3 +149,33 @@ JITSI_DOMAIN = "meet.ffmuc.net"
 # DEFAULTS
 # --------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Add this to ensure CSRF cookie is always set
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the cookie
+CSRF_USE_SESSIONS = False
+
+
+# PWA Settings
+PWA_APP_NAME = 'EduTrellis'
+PWA_APP_DESCRIPTION = 'Premium online education platform'
+PWA_APP_THEME_COLOR = '#c7212f'
+PWA_APP_BACKGROUND_COLOR = '#ffffff'
+PWA_APP_DISPLAY = 'standalone'
+PWA_APP_SCOPE = '/'
+PWA_APP_ORIENTATION = 'portrait-primary'
+PWA_APP_START_URL = '/'
+
+# Static files for PWA icons (create these images)
+PWA_APP_ICONS = [
+    {
+        'src': '/static/img/icon-192.png',
+        'sizes': '192x192'
+    },
+    {
+        'src': '/static/img/icon-512.png',
+        'sizes': '512x512'
+    }
+]
+
+# Security headers for PWA
+SECURE_REFERRER_POLICY = 'same-origin'

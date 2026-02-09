@@ -12,25 +12,25 @@
   </div>
 
   <div class="panel">
-    <div class="ad-card-hd">
+    <div class="admin-card-hd">
       <h3>All test series courses</h3>
-      <div class="ad-filters">
+      <div class="admin-filters">
         <form method="GET" style="display: flex; gap: 8px;">
-          <input type="text" name="search" class="ad-filter-input" placeholder="Search test series..." value="{{ search_query }}">
-          <select name="category" class="ad-filter-select">
+          <input type="text" name="search" class="admin-filter-input" placeholder="Search test series..." value="{{ search_query }}">
+          <select name="category" class="admin-filter-select">
             <option value="">All Categories</option>
             {% for category in categories %}
             <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>
             {% endfor %}
           </select>
-          <button type="submit" class="ad-filter-btn">Filter</button>
+          <button type="submit" class="admin-filter-btn">Filter</button>
         </form>
       </div>
     </div>
 
-    <div class="ad-card-bd">
+    <div class="admin-card-bd">
       {% if page_obj %}
-        <table class="ad-table">
+        <table class="admin-table">
           <thead>
             <tr>
               <th>Title</th>

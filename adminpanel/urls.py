@@ -145,5 +145,9 @@ path('scheduled-tests/<int:test_pk>/add-question/', tviews.question_create, name
     path('developer-popup/edit/<int:pk>/', views.developer_popup_edit, name='developer_popup_edit'),
     path('developer-popup/delete/<int:pk>/', views.developer_popup_delete, name='developer_popup_delete'),
     path('developer-popup/toggle/<int:pk>/', views.developer_popup_toggle_status, name='developer_popup_toggle_status'),
+    
 
+    path('adminnotifications/', views.notification_manage, name='adminnotifications'),
+    path('notifications/create/', views.notification_create, name='notification_create'),
+    path('notifications/delete/<int:pk>/', views.notification_delete, name='notification_delete'),
 ]

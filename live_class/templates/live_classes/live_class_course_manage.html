@@ -11,25 +11,25 @@
   </div>
 
   <div class="panel">
-    <div class="ad-card-hd">
+    <div class="admin-card-hd">
       <h3>All Courses</h3>
-      <div class="ad-filters">
-        <input name="q" type="text" class="ad-filter-input" placeholder="Search By Name" value="{{ request.GET.q }}" form="search-form">
-        <select name="type" form="search-form" class="ad-filter-input" style="width: auto;">
+      <div class="admin-filters">
+        <input name="q" type="text" class="admin-filter-input" placeholder="Search By Name" value="{{ request.GET.q }}" form="search-form">
+        <select name="type" form="search-form" class="admin-filter-input" style="width: auto;">
           <option value="">All Types</option>
           <option value="free" {% if selected_type == 'free' %}selected{% endif %}>Free Only</option>
           <option value="paid" {% if selected_type == 'paid' %}selected{% endif %}>Paid Only</option>
         </select>
         <form id="search-form" method="get" style="display:contents;">
-          <button type="submit" class="ad-filter-btn">Apply</button>
+          <button type="submit" class="admin-filter-btn">Apply</button>
         </form>
-        <a href="{% url 'liveclass' %}" class="ad-filter-btn" style="background: #6c757d; border-color: #6c757d;">Reset</a>
+        <a href="{% url 'liveclass' %}" class="admin-filter-btn" style="background: #6c757d; border-color: #6c757d;">Reset</a>
       </div>
     </div>
 
-    <div class="ad-card-bd">
+    <div class="admin-card-bd">
       <div class="table-wrapper">
-        <table class="ad-table">
+        <table class="admin-table">
           <colgroup>
             <col style="width:3%">
             <col style="width:14%">
@@ -73,8 +73,8 @@
                   {% if c.is_free %}Free{% else %}Paid{% endif %}
                 </span>
               </td>
-              <td>{% if c.is_free %}<span style="color: var(--ad-muted);">-</span>{% else %}₹{{ c.original_price }}{% endif %}</td>
-              <td>{% if c.is_free %}<span style="color: var(--ad-muted);">-</span>{% else %}₹{{ c.current_price }}{% endif %}</td>
+              <td>{% if c.is_free %}<span style="color: var(--admin-muted);">-</span>{% else %}₹{{ c.original_price }}{% endif %}</td>
+              <td>{% if c.is_free %}<span style="color: var(--admin-muted);">-</span>{% else %}₹{{ c.current_price }}{% endif %}</td>
               <td>
                 <button
                   class="status-badge {% if c.is_active %}status-active{% else %}status-inactive{% endif %} toggle-status-btn"
@@ -87,7 +87,7 @@
                 {% if c.banner_image_desktop %}
                   <img src="{{ c.banner_image_desktop.url }}" style="width:40px;height:30px;object-fit:cover;border-radius:4px;" alt="Banner">
                 {% else %}
-                  <span style="color: var(--ad-muted); font-size: 12px;">No image</span>
+                  <span style="color: var(--admin-muted); font-size: 12px;">No image</span>
                 {% endif %}
               </td>
               <td>
@@ -96,7 +96,7 @@
                     {{ c.category.name }}
                   </span>
                 {% else %}
-                  <span style="color: var(--ad-muted); font-style: italic; font-size: 12px;">No Category</span>
+                  <span style="color: var(--admin-muted); font-style: italic; font-size: 12px;">No Category</span>
                 {% endif %}
               </td>
               <td>
@@ -132,7 +132,7 @@
               <td colspan="12">
                 <div class="empty-state" style="text-align: center;">
                   <div class="empty-icon">
-                    <i class="fas fa-chalkboard-teacher" style="font-size: 48px; color: var(--ad-muted);"></i>
+                    <i class="fas fa-chalkboard-teacher" style="font-size: 48px; color: var(--admin-muted);"></i>
                   </div>
                   <h3 class="empty-title">No live class courses yet</h3>
                   <p class="empty-text">Add a new course to get started.</p>
@@ -150,7 +150,7 @@
 <!-- Classes Modal -->
 <div id="classes-modal" style="display:none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto;">
   <div class="panel" style="width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
-    <div class="ad-card-hd">
+    <div class="admin-card-hd">
       <h3 id="modal-course-title" class="panel-title">Loading...</h3>
       <button onclick="closeModal()" class="btn" style="padding:6px 12px; min-width: auto;">&times;</button>
     </div>
@@ -185,7 +185,7 @@
           <label style="display: inline-flex; align-items: center; gap: 6px; margin-left: 16px; cursor: pointer;">
             <input type="checkbox" id="enable_auto_recording" name="enable_auto_recording"> Auto Recording
           </label>
-          <p id="course-type-info" style="margin-top: 8px; font-size: 12px; color: var(--ad-muted);"></p>
+          <p id="course-type-info" style="margin-top: 8px; font-size: 12px; color: var(--admin-muted);"></p>
         </div>
         <div class="col-12">
           <div class="actions">
@@ -278,7 +278,7 @@ function reloadClasses(courseId) {
 
       let html = `
         <div class="table-wrapper">
-          <table class="ad-table">
+          <table class="admin-table">
             <thead>
               <tr>
                 <th style="width: 5%;">#</th>
@@ -315,7 +315,7 @@ function reloadClasses(courseId) {
       } else {
         html += `<tr><td colspan="7">
           <div class="empty-state" style="text-align: center;">
-            <div class="empty-icon"><i class="fas fa-calendar-times" style="font-size: 36px; color: var(--ad-muted);"></i></div>
+            <div class="empty-icon"><i class="fas fa-calendar-times" style="font-size: 36px; color: var(--admin-muted);"></i></div>
             <h4 class="empty-title">No scheduled classes</h4>
             <p class="empty-text">Add a new schedule to get started.</p>
           </div>

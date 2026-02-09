@@ -52,13 +52,13 @@
     </div>
 
     <div class="panel">
-        <div class="ad-card-hd">
+        <div class="admin-card-hd">
             <h3 class="panel-title">SMTP Configurations</h3>
         </div>
 
         {% if configurations %}
-            <div class="ad-card-bd">
-                <table class="ad-table">
+            <div class="admin-card-bd">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -98,9 +98,9 @@
                                 <td>
                                     {% if config.last_tested %}
                                         <div style="font-size: 13px;">{{ config.last_tested|date:"M d, Y" }}</div>
-                                        <div style="font-size: 11px; color: var(--ad-muted);">{{ config.last_tested|date:"g:i A" }}</div>
+                                        <div style="font-size: 11px; color: var(--admin-muted);">{{ config.last_tested|date:"g:i A" }}</div>
                                     {% else %}
-                                        <span style="color: var(--ad-muted); font-style: italic;">Never tested</span>
+                                        <span style="color: var(--admin-muted); font-style: italic;">Never tested</span>
                                     {% endif %}
                                 </td>
                                 <td>

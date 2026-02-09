@@ -52,17 +52,17 @@
     </div>
 
     <div class="panel">
-        <div class="ad-card-hd">
+        <div class="admin-card-hd">
             <h3 class="panel-title">Category Management</h3>
-            <div class="ad-filters">
-                <input type="text" class="ad-filter-input" placeholder="Search categories..." id="categorySearch">
-                <button class="ad-filter-btn" onclick="searchCategories()">Search</button>
+            <div class="admin-filters">
+                <input type="text" class="admin-filter-input" placeholder="Search categories..." id="categorySearch">
+                <button class="admin-filter-btn" onclick="searchCategories()">Search</button>
             </div>
         </div>
 
         {% if categories %}
-            <div class="ad-card-bd">
-                <table class="ad-table">
+            <div class="admin-card-bd">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -87,12 +87,12 @@
                                     {% if category.description %}
                                         {{ category.description|truncatewords:8 }}
                                     {% else %}
-                                        <span style="color: var(--ad-muted); font-style: italic;">No description</span>
+                                        <span style="color: var(--admin-muted); font-style: italic;">No description</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     <div style="font-size: 13px;">{{ category.created_at|date:"M d, Y" }}</div>
-                                    <div style="font-size: 11px; color: var(--ad-muted);">{{ category.created_at|date:"g:i A" }}</div>
+                                    <div style="font-size: 11px; color: var(--admin-muted);">{{ category.created_at|date:"g:i A" }}</div>
                                 </td>
                                 <td>
                                     <div class="row-actions">
@@ -143,7 +143,7 @@
 <script>
 function searchCategories() {
     const searchTerm = document.getElementById('categorySearch').value.toLowerCase();
-    const rows = document.querySelectorAll('.ad-table tbody tr');
+    const rows = document.querySelectorAll('.admin-table tbody tr');
     
     rows.forEach(row => {
         const categoryName = row.cells[1].textContent.toLowerCase();

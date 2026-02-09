@@ -59,6 +59,18 @@ urlpatterns = [
     path('payment/create/<str:course_type>/<int:course_id>/',views.create_payment_order, name='create_payment_order'),
     path('payment/handler/', views.payment_handler,name='payment_handler'),
     path('my_purchases/', views.my_purchases, name='my_purchases'),
-    
 
+    # Notifications
+
+
+path('notifications/', views.notifications_list, name='notifications_list'),
+path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+path('notifications/<int:notification_id>/delete/', views.delete_notification, name='delete_notification'),
+path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+path('notifications/clear-all/', views.clear_all_notifications, name='clear_all_notifications'),
+
+   # PWA URLs
+    path('manifest.json', views.manifest, name='manifest1'),
+    path('offline/', views.offline, name='offline'),
+    path('serviceworker.js', views.service_worker, name='service-worker'),
 ]

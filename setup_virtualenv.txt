@@ -3,3 +3,6 @@
 2.  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 3. .\env\Scripts\Activate.ps1
+
+truncate -s 0 /var/log/edutrellis.pythonanywhere.com.error.log
+

@@ -9,6 +9,33 @@ import os
 import smtplib
 
 
+
+#notifications models
+class Notification(models.Model):
+    title = models.CharField(max_length=200, help_text="Notification title")
+    body = models.TextField(help_text="Notification message/content")
+    link = models.URLField(max_length=500, blank=True, null=True, help_text="Optional link (leave empty if not needed)")
+    scheduled_time = models.DateTimeField(help_text="When to show this notification")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-scheduled_time', '-created_at']
+        verbose_name = "Notification"
+        verbose_name_plural = "Notifications"
+    
+    def __str__(self):
+        return self.title
+    
+    @property
+    def is_scheduled(self):
+        """Check if notification is scheduled for future"""
+        return self.scheduled_time > timezone.now()
+    
+
+
+
 class DeveloperPopup(models.Model):
     """Model to manage the developer info popup displayed on first page load"""
     
@@ -843,3 +870,5 @@ class ProductBundle(models.Model):
             total += elibrary.current_price
         
         return total
+    
+

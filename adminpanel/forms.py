@@ -17,11 +17,44 @@ from .models import (
     FooterLink,
     FooterLegalLink,
     DeveloperPopup,
+    Notification,
 )
 
 User = get_user_model()
 
-
+# Notifications
+class NotificationForm(forms.ModelForm):
+    class Meta:
+        model = Notification
+        fields = ['title', 'body', 'link']  # Removed is_active
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter notification title',
+                'maxlength': '200'
+            }),
+            'body': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter notification message',
+                'rows': 5
+            }),
+            'link': forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'https://example.com (optional)'
+            })
+        }
+        
+    def clean_title(self):
+        title = self.cleaned_data.get('title')
+        if not title or not title.strip():
+            raise forms.ValidationError("Title cannot be empty")
+        return title.strip()
+    
+    def clean_body(self):
+        body = self.cleaned_data.get('body')
+        if not body or not body.strip():
+            raise forms.ValidationError("Message body cannot be empty")
+        return body.strip()
 
 class DeveloperPopupForm(forms.ModelForm):
     class Meta:

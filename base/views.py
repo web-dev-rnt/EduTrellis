@@ -5,14 +5,17 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.cache import cache_page
-from django.http import JsonResponse, FileResponse, HttpResponse, Http404
+from django.http import JsonResponse, FileResponse, HttpResponse, Http404, HttpResponseBadRequest
 from django.urls import reverse
 from django.utils import timezone
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.conf import settings
 from django.db.models import Count, Sum, Prefetch, Q, Avg
+from django.contrib.auth.hashers import make_password
+import razorpay
+
+# ==================== LOCAL APP IMPORTS ====================
 from .forms import (
     EmailLoginForm, 
     SignupForm, 
@@ -20,7 +23,7 @@ from .forms import (
     PasswordChangeSimpleForm, 
     OTPVerificationForm
 )
-from .models import User, OTPVerification , UserCourseAccess
+from .models import User, OTPVerification, UserCourseAccess, Payment
 from .utils import has_smtp_configured, create_and_send_otp
 from video_courses.models import VideoCourse, Category
 from live_class.models import LiveClassCourse, LiveClassSession
@@ -35,12 +38,452 @@ from adminpanel.models import (
     ProductBundle, 
     Coupon, 
     UserCoupon, 
-    SMTPConfiguration
+    SMTPConfiguration, 
+    Notification as AdminNotification
 )
+
+# ==================== OTHER IMPORTS ====================
 import json
 import os
+import secrets
+import string
 from datetime import timedelta
+import logging
 
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_GET
+from django.views.decorators.cache import cache_control
+from django.conf import settings
+from django.shortcuts import render
+import os
+
+@require_GET
+@cache_control(max_age=0, no_cache=True, no_store=True, must_revalidate=True)
+def service_worker(request):
+    """Serve the service worker from root URL"""
+    sw_path = os.path.join(settings.BASE_DIR, 'static', 'js', 'serviceworker.js')
+    
+    try:
+        with open(sw_path, 'r', encoding='utf-8') as sw_file:
+            sw_content = sw_file.read()
+            response = HttpResponse(sw_content, content_type='application/javascript; charset=utf-8')
+            response['Service-Worker-Allowed'] = '/'
+            return response
+    except FileNotFoundError:
+        return HttpResponse('Service worker not found', status=404, content_type='text/plain')
+
+@require_GET
+@cache_control(max_age=3600)  # Cache for 1 hour
+def manifest(request):
+    """Generate and serve the manifest.json dynamically"""
+    
+    # Build absolute URLs for icons
+    def build_icon_url(filename):
+        return request.build_absolute_uri(settings.STATIC_URL + f'img/{filename}')
+    
+    manifest_data = {
+        "name": "EduTrellis - Complete Learning Platform",
+        "short_name": "EduTrellis",
+        "description": "Access live classes, video courses, test series, and e-library. Learn anytime, anywhere with EduTrellis.",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#c7212f",
+        "orientation": "portrait-primary",
+        "categories": ["education", "learning", "productivity"],
+        "lang": "en-IN",
+        "dir": "ltr",
+        
+        # Icons - required for PWA
+        "icons": [
+            {
+                "src": build_icon_url("icon-72x72.png"),
+                "sizes": "72x72",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": build_icon_url("icon-96x96.png"),
+                "sizes": "96x96",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": build_icon_url("icon-128x128.png"),
+                "sizes": "128x128",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": build_icon_url("icon-144x144.png"),
+                "sizes": "144x144",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": build_icon_url("icon-152x152.png"),
+                "sizes": "152x152",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": build_icon_url("icon-192x192.png"),
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+            },
+            {
+                "src": build_icon_url("icon-384x384.png"),
+                "sizes": "384x384",
+                "type": "image/png",
+                "purpose": "any"
+            },
+            {
+                "src": build_icon_url("icon-512x512.png"),
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            }
+        ],
+        
+        # Shortcuts - quick actions from app icon (Android)
+        "shortcuts": [
+            {
+                "name": "Video Courses",
+                "short_name": "Courses",
+                "description": "Browse all video courses",
+                "url": "/#video-courses",
+                "icons": [
+                    {
+                        "src": build_icon_url("icon-192x192.png"),
+                        "sizes": "192x192",
+                        "type": "image/png"
+                    }
+                ]
+            },
+            {
+                "name": "Live Classes",
+                "short_name": "Live",
+                "description": "Join live classes",
+                "url": "/#live-classes",
+                "icons": [
+                    {
+                        "src": build_icon_url("icon-192x192.png"),
+                        "sizes": "192x192",
+                        "type": "image/png"
+                    }
+                ]
+            },
+            {
+                "name": "Test Series",
+                "short_name": "Tests",
+                "description": "Take practice tests",
+                "url": "/#test-series",
+                "icons": [
+                    {
+                        "src": build_icon_url("icon-192x192.png"),
+                        "sizes": "192x192",
+                        "type": "image/png"
+                    }
+                ]
+            },
+            {
+                "name": "E-Library",
+                "short_name": "Library",
+                "description": "Access digital books",
+                "url": "/#e-library",
+                "icons": [
+                    {
+                        "src": build_icon_url("icon-192x192.png"),
+                        "sizes": "192x192",
+                        "type": "image/png"
+                    }
+                ]
+            }
+        ],
+        
+        # Screenshots - helps with app store listing (optional but recommended)
+        "screenshots": [
+            {
+                "src": build_icon_url("screenshot-1.png"),
+                "sizes": "540x720",
+                "type": "image/png",
+                "form_factor": "narrow",
+                "label": "Home page showing all courses"
+            },
+            {
+                "src": build_icon_url("screenshot-2.png"),
+                "sizes": "1280x720",
+                "type": "image/png",
+                "form_factor": "wide",
+                "label": "Course detail page"
+            }
+        ],
+        
+        # Related applications - set to false to prefer PWA
+        "prefer_related_applications": False,
+        
+        # Additional features
+        "iarc_rating_id": "",  # Add if you have IARC rating
+        "gcm_sender_id": "",   # Add if using push notifications later
+    }
+    
+    return JsonResponse(manifest_data, json_dumps_params={'indent': 2})
+
+@require_GET
+def offline(request):
+    """Offline fallback page"""
+    return render(request, 'offline.html')
+
+
+#notifications views 
+@login_required
+def notifications_list(request):
+    """Get user notifications with filtering - includes both user-specific and admin broadcast notifications"""
+    # Get filter parameters
+    filter_type = request.GET.get('type', 'all')
+    show_read = request.GET.get('show_read', 'false') == 'true'
+    
+    # === USER-SPECIFIC NOTIFICATIONS ===
+    notifications_query = request.user.notifications.all()
+    
+    # Apply filters
+    if not show_read:
+        notifications_query = notifications_query.filter(is_read=False)
+    
+    if filter_type != 'all':
+        notifications_query = notifications_query.filter(notification_type=filter_type)
+    
+    # Exclude expired notifications
+    notifications_query = notifications_query.exclude(
+        expires_at__lt=timezone.now()
+    )
+    
+    # Get user notifications
+    user_notifications = list(notifications_query[:20])
+    
+    # === ADMIN BROADCAST NOTIFICATIONS ===
+    # Get active admin notifications that are scheduled to show
+    admin_notifications = AdminNotification.objects.filter(
+        is_active=True,
+        scheduled_time__lte=timezone.now()
+    ).order_by('-scheduled_time')[:10]
+    
+    # === CALCULATE UNREAD COUNT ===
+    # Count user-specific unread notifications
+    user_unread_count = request.user.notifications.filter(
+        is_read=False
+    ).exclude(
+        expires_at__lt=timezone.now()
+    ).count()
+    
+    # Count active admin notifications (always considered "unread")
+    admin_unread_count = admin_notifications.count()
+    
+    # Total unread count (user notifications + admin notifications)
+    total_unread_count = user_unread_count + admin_unread_count
+    
+    # Combine and format notifications
+    notification_data = []
+    
+    # Add user-specific notifications
+    for notification in user_notifications:
+        notification_data.append({
+            'id': notification.id,
+            'title': notification.title,
+            'message': notification.message,
+            'link': notification.link,
+            'is_read': notification.is_read,
+            'created_at': notification.created_at.strftime('%b %d, %Y at %I:%M %p'),
+            'type': notification.notification_type,
+            'priority': notification.priority,
+            'source': 'user',  # Mark as user-specific notification
+            'is_admin': False
+        })
+    
+    # Add admin broadcast notifications
+    for notification in admin_notifications:
+        notification_data.append({
+            'id': f'admin_{notification.id}',
+            'title': notification.title,
+            'message': notification.body,
+            'link': notification.link or '#',
+            'is_read': False,  # Admin notifications are always shown as new
+            'created_at': notification.scheduled_time.strftime('%b %d, %Y at %I:%M %p'),
+            'type': 'announcement',  # Set type as announcement
+            'priority': 'high',
+            'source': 'admin',  # Mark as admin notification
+            'is_admin': True
+        })
+    
+    # Sort combined notifications by creation date (newest first)
+    notification_data.sort(
+        key=lambda x: timezone.datetime.strptime(x['created_at'], '%b %d, %Y at %I:%M %p'),
+        reverse=True
+    )
+    
+    # Limit to 20 total notifications
+    notification_data = notification_data[:20]
+    
+    return JsonResponse({
+        'notifications': notification_data,
+        'unread_count': total_unread_count,  # This now includes both user and admin notifications
+        'user_unread_count': user_unread_count,
+        'admin_unread_count': admin_unread_count,
+        'total_count': len(notification_data)
+    })
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """Mark a user-specific notification as read"""
+    if request.method == 'POST':
+        try:
+            # Check if it's an admin notification (can't mark as read)
+            if str(notification_id).startswith('admin_'):
+                return JsonResponse({
+                    'status': 'info',
+                    'message': 'Admin notifications cannot be marked as read'
+                })
+            
+            notification = get_object_or_404(
+                UserNotification, 
+                id=notification_id, 
+                user=request.user
+            )
+            notification.mark_as_read()
+            
+            # Recalculate total unread count
+            user_unread = request.user.notifications.filter(
+                is_read=False
+            ).exclude(
+                expires_at__lt=timezone.now()
+            ).count()
+            
+            # Count active admin notifications
+            admin_unread = AdminNotification.objects.filter(
+                is_active=True,
+                scheduled_time__lte=timezone.now()
+            ).count()
+            
+            total_unread = user_unread + admin_unread
+            
+            return JsonResponse({
+                'status': 'success',
+                'unread_count': total_unread
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error', 
+                'message': str(e)
+            }, status=400)
+    
+    return JsonResponse({
+        'status': 'error', 
+        'message': 'Invalid request'
+    }, status=400)
+
+@login_required
+def mark_all_notifications_read(request):
+    """Mark all user-specific notifications as read"""
+    if request.method == 'POST':
+        request.user.notifications.filter(is_read=False).update(is_read=True)
+        
+        # Count remaining admin notifications for badge
+        admin_unread = AdminNotification.objects.filter(
+            is_active=True,
+            scheduled_time__lte=timezone.now()
+        ).count()
+        
+        return JsonResponse({
+            'status': 'success', 
+            'unread_count': admin_unread  # Only admin notifications remain "unread"
+        })
+    
+    return JsonResponse({
+        'status': 'error', 
+        'message': 'Invalid request'
+    }, status=400)
+
+@login_required
+def delete_notification(request, notification_id):
+    """Delete a specific user notification"""
+    if request.method == 'POST':
+        try:
+            # Check if it's an admin notification (can't delete)
+            if str(notification_id).startswith('admin_'):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Admin notifications cannot be deleted'
+                }, status=400)
+            
+            notification = get_object_or_404(
+                UserNotification, 
+                id=notification_id, 
+                user=request.user
+            )
+            notification.delete()
+            
+            # Recalculate total unread count
+            user_unread = request.user.notifications.filter(
+                is_read=False
+            ).exclude(
+                expires_at__lt=timezone.now()
+            ).count()
+            
+            # Count active admin notifications
+            admin_unread = AdminNotification.objects.filter(
+                is_active=True,
+                scheduled_time__lte=timezone.now()
+            ).count()
+            
+            total_unread = user_unread + admin_unread
+            
+            return JsonResponse({
+                'status': 'success',
+                'unread_count': total_unread
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error', 
+                'message': str(e)
+            }, status=400)
+    
+    return JsonResponse({
+        'status': 'error', 
+        'message': 'Invalid request'
+    }, status=400)
+
+@login_required
+def clear_all_notifications(request):
+    """Clear all read user notifications"""
+    if request.method == 'POST':
+        request.user.notifications.filter(is_read=True).delete()
+        
+        # Recalculate total unread count
+        user_unread = request.user.notifications.filter(
+            is_read=False
+        ).exclude(
+            expires_at__lt=timezone.now()
+        ).count()
+        
+        # Count active admin notifications
+        admin_unread = AdminNotification.objects.filter(
+            is_active=True,
+            scheduled_time__lte=timezone.now()
+        ).count()
+        
+        total_unread = user_unread + admin_unread
+        
+        return JsonResponse({
+            'status': 'success',
+            'unread_count': total_unread
+        })
+    
+    return JsonResponse({
+        'status': 'error', 
+        'message': 'Invalid request'
+    }, status=400)
 
 @login_required
 def my_purchases(request):
@@ -1279,44 +1722,52 @@ def login_view(request):
         return redirect('home')
     
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
+        email = request.POST.get('email', '').strip().lower()  # Normalize email
         password = request.POST.get('password', '')
         remember = request.POST.get('remember')
-
+        
+        
+        if not email or not password:
+            messages.error(request, 'Please enter both email and password.')
+            return render(request, 'login.html')
+        
+        # Check if user exists first
+        try:
+            user_exists = User.objects.filter(email__iexact=email).exists()
+        except Exception as e:
+            print(f"Database error: {e}")
+            messages.error(request, 'An error occurred. Please try again.')
+            return render(request, 'login.html')
+        
+        if not user_exists:
+            messages.error(request, 'No account found with this email.')
+            return render(request, 'login.html')
+        
+        # Authenticate user
         user = authenticate(request, username=email, password=password)
         
         if user is not None:
-            # ✅ Directly allow login (no email verification check)
-            login(request, user)
-
-            # Remember Me functionality
-            if remember:
-                request.session.set_expiry(2592000)  # 30 days
+            if user.is_active:
+                login(request, user)
+                
+                # Remember Me functionality
+                if remember:
+                    request.session.set_expiry(2592000)  # 30 days
+                else:
+                    request.session.set_expiry(0)  # until browser closes
+                
+                messages.success(request, f'Welcome back, {user.get_full_name_or_email()}!')
+                
+                # Redirect to 'next' if present
+                next_url = request.POST.get('next') or request.GET.get('next') or 'home'
+                return redirect(next_url)
             else:
-                request.session.set_expiry(0)  # until browser closes
-            
-            messages.success(request, f'Welcome back, {user.get_full_name_or_email()}!')
-            
-            # Redirect to 'next' if present
-            next_url = request.POST.get('next') or request.GET.get('next') or 'home'
-            return redirect(next_url)
-
+                messages.error(request, 'Your account is disabled.')
         else:
-            # If email exists but wrong password — give proper feedback
-            if User.objects.filter(email=email).exists():
-                messages.error(request, 'Incorrect password. Please try again.')
-            else:
-                messages.error(request, 'No account found with this email.')
+            messages.error(request, 'Incorrect password. Please try again.')
     
     return render(request, 'login.html')
 
-import secrets
-import string
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
-from django.core.mail import send_mail, get_connection
-from django.contrib.auth.hashers import make_password
-from django.utils import timezone
 
 
 @require_http_methods(["POST"])
@@ -1577,7 +2028,6 @@ def logout_view(request):
     messages.success(request, 'You have been logged out successfully.')
     return redirect('login')
 
-# Signup / OTP Verification
 # Signup / OTP Verification
 def signup_view(request):
     """Handle user registration with optional OTP verification."""
@@ -2318,18 +2768,7 @@ def elibrary_category(request, category_slug):
 
 
 
-# payment/views.py
-import razorpay
-from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponseBadRequest, JsonResponse
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from datetime import timedelta
-from .models import Payment, UserCourseAccess
-import logging
-import json
+#Payment views
 
 logger = logging.getLogger(__name__)
 
