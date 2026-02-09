@@ -1,1 +1,1 @@
-web: gunicorn edutrellis.wsgi
+web: gunicorn eduTrellis.wsgi
