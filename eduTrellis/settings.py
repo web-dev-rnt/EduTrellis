@@ -180,3 +180,4 @@ PWA_APP_ICONS = [
 
 # Security headers for PWA
 SECURE_REFERRER_POLICY = 'same-origin'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
