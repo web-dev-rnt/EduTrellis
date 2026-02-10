@@ -16,7 +16,8 @@ SECRET_KEY = "django-insecure-h^l!e0kvn8ore3fikloht@x^6nlif_jbgg$=x=!0b(v-lu#ev_
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['edutrellis-production.up.railway.app']
+ALLOWED_HOSTS = [  "ganeshsirclasses.online",
+    "www.ganeshsirclasses.online",]
 
 # --------------------
 # APPLICATIONS
