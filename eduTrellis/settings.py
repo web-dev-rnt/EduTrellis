@@ -5,7 +5,6 @@ Django settings for eduTrellis project (Django 5.2+ ready).
 from pathlib import Path
 import os
 from django.core.management.utils import get_random_secret_key
-
 # --------------------
 # BASE SETTINGS
 # --------------------
@@ -14,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 SECRET_KEY = "django-insecure-h^l!e0kvn8ore3fikloht@x^6nlif_jbgg$=x=!0b(v-lu#ev_"
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["ganeshsirclasses.online","www.ganeshsirclasses.online",]
 
@@ -83,13 +82,14 @@ WSGI_APPLICATION = "eduTrellis.wsgi.application"
 # --------------------
 # DATABASE
 # --------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+import dj_database_url
+import os
 
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('postgresql://postgres:kEXGQNxJDRWERznrdJugjYQHHRdvHxoP@ballast.proxy.rlwy.net:29071/railway')
+    )
+}
 # --------------------
 # PASSWORD VALIDATION
 # --------------------
