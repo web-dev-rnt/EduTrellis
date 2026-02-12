@@ -16,7 +16,7 @@ SECRET_KEY = "django-insecure-h^l!e0kvn8ore3fikloht@x^6nlif_jbgg$=x=!0b(v-lu#ev_
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['']
+ALLOWED_HOSTS = ['www.ganeshsirclasses.online']
 
 # --------------------
 # APPLICATIONS
