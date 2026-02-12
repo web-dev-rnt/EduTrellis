@@ -9,6 +9,20 @@ import json
 from video_courses.models import Category
 from testseries.models import TestSeries, Test, Question, Subject
 
+
+@login_required
+# @user_passes_test(is_admin)
+def test_series_delete(request, pk):
+    """Delete a test series"""
+    series = get_object_or_404(TestSeries, pk=pk)
+    if request.method == 'POST':
+        title = series.title
+        series.delete()
+        messages.success(request, f'Test series "{title}" has been deleted successfully.')
+        return redirect('test_series_manage')
+    return redirect('test_series_manage')
+
+    
 # ---------------------------------------------
 # Utility Functions
 # ---------------------------------------------

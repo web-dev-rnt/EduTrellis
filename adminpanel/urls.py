@@ -113,14 +113,16 @@ urlpatterns = [
     #add user
     path('users/add/', views.add_user, name='admin_add_user'),
     
- # Test Series URLs - Proper naming
+# Test Series URLs - Proper naming
 path('test-series-courses/', tviews.test_series_manage, name='test_series_manage'),
 path('test-series-courses/create/', tviews.test_series_create, name='test_series_create'),
 path('test-series-courses/<int:pk>/', tviews.test_series_detail, name='test_series_detail'),
 path('test-series-courses/<int:pk>/edit/', tviews.test_series_edit, name='test_series_edit'),
+path('test-series-courses/<int:pk>/delete/', tviews.test_series_delete, name='test_series_delete'),
 path('test-series-courses/<int:series_pk>/schedule-test/', tviews.test_create, name='test_create'),
 path('scheduled-tests/<int:pk>/edit/', tviews.test_edit, name='test_edit'),
 path('scheduled-tests/<int:test_pk>/add-question/', tviews.question_create, name='question_create'),
+
 
   # Main bundle management
     path('bundle_manage/', views.bundle_manage, name='bundle_manage'),
