@@ -81,14 +81,11 @@ WSGI_APPLICATION = "eduTrellis.wsgi.application"
 
 # --------------------
 # DATABASE
-# --------------------
-import dj_database_url
-import os
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('postgresql://postgres:kEXGQNxJDRWERznrdJugjYQHHRdvHxoP@ballast.proxy.rlwy.net:29071/railway')
-    )
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 # --------------------
 # PASSWORD VALIDATION
