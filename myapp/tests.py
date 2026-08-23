@@ -95,6 +95,23 @@ class AIResponseReliabilityTests(TestCase):
         self.assertEqual(request_router.match_edit_note('edit note 1 to Call at 7'), ('1', 'Call at 7'))
         self.assertTrue(request_router.is_note_intent('create a note: Call at 7'))
 
+    def test_note_router_tolerates_common_typos_without_over_correcting(self):
+        # A missed match here doesn't fail quietly — it falls through to the
+        # real AI model, which (per its own history of this router's past
+        # confirmations) fabricates its own fake "done!" instead of just not
+        # understanding. See request_router._typo_correct_note_keywords.
+        self.assertEqual(request_router.match_delete_note('delet all notyes'), request_router.DELETE_ALL_NOTES)
+        self.assertTrue(request_router.is_note_intent('tkae this noet'))
+        self.assertTrue(request_router.is_show_notes_intent('shwo my notess'))
+        self.assertEqual(request_router.match_edit_note('edti note about milk to bread'), ('milk', 'bread'))
+        self.assertEqual(request_router.match_read_note('opne note 1'), '1')
+        # Ordinary sentences that merely contain a word close to one of the
+        # trigger keywords must never get swept in as a false positive —
+        # 'made' -> 'make' would otherwise turn a past-tense remark into a
+        # live "make a note" command.
+        self.assertFalse(request_router.is_note_intent('she made a note about it yesterday, what should I do'))
+        self.assertFalse(request_router.is_note_intent('I have not opened the store today'))
+
     def test_company_context_contains_public_contacts_and_prices(self):
         self.assertTrue(company_knowledge.is_company_query('what is the sales team number?'))
         self.assertIn('+91 96959 53183', company_knowledge.PUBLIC_SITE_CONTEXT)
