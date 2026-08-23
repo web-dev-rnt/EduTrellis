@@ -2188,14 +2188,42 @@ def _ai_note_heading(text):
     return (first_line[:60] + '…') if len(first_line) > 60 else first_line
 
 
+def _ai_note_action_reply(request, conversation, confirmation, extra_headers=None):
+    """Shared tail for every My Notes action (save/show/delete/edit) —
+    saves `confirmation` as the assistant's turn and returns it on the same
+    StreamingHttpResponse contract ai_chat_send's real model-call path uses,
+    so the frontend's existing send()/pump() handling needs no
+    special-casing beyond reading the extra X-Notes-Changed header (see
+    refreshNotes() in ai.html). No AI model call, no free-message quota
+    spent, for any of these."""
+    AIMessage.objects.create(
+        conversation=conversation, role=AIMessage.ROLE_ASSISTANT,
+        content=confirmation, model_key='note',
+    )
+    conversation.updated_at = timezone.now()
+    conversation.save(update_fields=['updated_at'])
+
+    def event_stream():
+        yield confirmation
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/plain; charset=utf-8')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    response['X-Conversation-Id'] = str(conversation.id)
+    response['X-Model-Key'] = 'note'
+    response['X-Request-Category'] = 'note'
+    response['X-Sumudrika'] = ''
+    response['X-Jagu'] = ''
+    response['X-Persona-End'] = ''
+    response['X-Products'] = ''
+    for key, value in (extra_headers or {}).items():
+        response[key] = value
+    return response
+
+
 def _ai_save_note_response(request, conversation, message):
-    """Short-circuits ai_chat_send when the user's message is a 'take this
-    note' / 'note it down' / 'save details...' request (see
-    request_router.is_note_intent) — no AI model call, no free-message quota
-    spent, just a saved AINote plus a small confirmation reply, kept on the
-    same StreamingHttpResponse contract as a normal reply so the frontend's
-    existing send()/pump() handling needs no special-casing beyond reading
-    the extra X-Note-* headers.
+    """'Take this note' / 'note it down' / 'save details...' (see
+    request_router.is_note_intent) — saves a new AINote.
 
     Notes whatever extra text came with the trigger phrase itself ('note
     down: buy milk' -> 'buy milk') when there is any; otherwise falls back
@@ -2225,29 +2253,87 @@ def _ai_save_note_response(request, conversation, message):
         f"_{saved_at.strftime('%b %d, %Y at %I:%M %p')}_\n\n"
         "You can find it anytime in My Notes from the sidebar."
     )
-    AIMessage.objects.create(
-        conversation=conversation, role=AIMessage.ROLE_ASSISTANT,
-        content=confirmation, model_key='note',
-    )
-    conversation.updated_at = timezone.now()
-    conversation.save(update_fields=['updated_at'])
+    return _ai_note_action_reply(request, conversation, confirmation, {
+        'X-Notes-Changed': '1', 'X-Note-Id': str(note.id),
+    })
 
-    def event_stream():
-        yield confirmation
 
-    response = StreamingHttpResponse(event_stream(), content_type='text/plain; charset=utf-8')
-    response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'
-    response['X-Conversation-Id'] = str(conversation.id)
-    response['X-Model-Key'] = 'note'
-    response['X-Request-Category'] = 'note'
-    response['X-Sumudrika'] = ''
-    response['X-Jagu'] = ''
-    response['X-Persona-End'] = ''
-    response['X-Products'] = ''
-    response['X-Note-Saved'] = '1'
-    response['X-Note-Id'] = str(note.id)
-    return response
+def _ai_show_notes_response(request, conversation):
+    """'Show my notes' / 'what notes do I have' (see
+    request_router.is_show_notes_intent) — lists the user's saved notes
+    right in the chat, newest first."""
+    notes = list(AINote.objects.filter(_ai_owner_filter(request)).order_by('-created_at')[:20])
+    if not notes:
+        confirmation = 'You don\'t have any saved notes yet — say something like "note it down" after a reply to save one.'
+    else:
+        lines = [
+            f"- **{n.heading or 'Untitled note'}** _( {timezone.localtime(n.created_at).strftime('%b %d, %Y at %I:%M %p')} )_"
+            for n in notes
+        ]
+        confirmation = "📒 Here are your saved notes:\n\n" + '\n'.join(lines)
+    return _ai_note_action_reply(request, conversation, confirmation)
+
+
+def _ai_matching_notes(request, target):
+    return list(AINote.objects.filter(_ai_owner_filter(request)).filter(
+        Q(heading__icontains=target) | Q(content__icontains=target),
+    )[:6])
+
+
+def _ai_delete_note_response(request, conversation, target):
+    """'Delete note about X' / 'delete all my notes' (see
+    request_router.match_delete_note)."""
+    if target == request_router.DELETE_ALL_NOTES:
+        owner_notes = AINote.objects.filter(_ai_owner_filter(request))
+        count = owner_notes.count()
+        owner_notes.delete()
+        confirmation = f"🗑️ Deleted all {count} of your saved notes." if count else "You don't have any saved notes to delete."
+        return _ai_note_action_reply(request, conversation, confirmation, {'X-Notes-Changed': '1'})
+
+    if not target:
+        confirmation = 'Tell me which note to delete, e.g. "delete note about milk".'
+        return _ai_note_action_reply(request, conversation, confirmation)
+
+    matches = _ai_matching_notes(request, target)
+    if not matches:
+        confirmation = f'I couldn\'t find a note matching "{target}".'
+        return _ai_note_action_reply(request, conversation, confirmation)
+    if len(matches) > 1:
+        listing = '\n'.join(f"- {n.heading or 'Untitled note'}" for n in matches)
+        confirmation = f"I found more than one note matching that:\n\n{listing}\n\nBe more specific about which one to delete."
+        return _ai_note_action_reply(request, conversation, confirmation)
+
+    note = matches[0]
+    heading = note.heading or 'Untitled note'
+    note.delete()
+    confirmation = f"🗑️ Deleted your note — **{heading}**."
+    return _ai_note_action_reply(request, conversation, confirmation, {'X-Notes-Changed': '1'})
+
+
+def _ai_edit_note_response(request, conversation, target, new_content):
+    """'Edit/update/change note about X to Y' (see
+    request_router.match_edit_note)."""
+    if not target or not new_content:
+        confirmation = 'Tell me which note to edit and the new text, e.g. "edit note about milk to buy bread and eggs".'
+        return _ai_note_action_reply(request, conversation, confirmation)
+
+    matches = _ai_matching_notes(request, target)
+    if not matches:
+        confirmation = f'I couldn\'t find a note matching "{target}".'
+        return _ai_note_action_reply(request, conversation, confirmation)
+    if len(matches) > 1:
+        listing = '\n'.join(f"- {n.heading or 'Untitled note'}" for n in matches)
+        confirmation = f"I found more than one note matching that:\n\n{listing}\n\nBe more specific about which one to edit."
+        return _ai_note_action_reply(request, conversation, confirmation)
+
+    note = matches[0]
+    note.content = new_content
+    note.heading = _ai_note_heading(new_content)
+    note.save(update_fields=['content', 'heading'])
+    confirmation = f"✏️ Updated your note — **{note.heading or 'Untitled note'}**."
+    return _ai_note_action_reply(request, conversation, confirmation, {
+        'X-Notes-Changed': '1', 'X-Note-Id': str(note.id),
+    })
 
 
 def ai_chat_send(request):
@@ -2407,12 +2493,22 @@ def ai_chat_send(request):
     conversation.save(update_fields=['updated_at'])
     request.session[AI_CURRENT_CONVERSATION_SESSION_KEY] = conversation.id
 
-    # 'Take this note' / 'note it down' / 'save details...' — save straight
-    # to My Notes and skip the AI model call entirely (see
-    # _ai_save_note_response), so this never costs a free-message credit or
-    # an image/document turn gets mistaken for note-taking.
-    if message and not image_data and not document_text and request_router.is_note_intent(message):
-        return _ai_save_note_response(request, conversation, message)
+    # My Notes: 'show my notes' / 'delete note about X' / 'edit note about X
+    # to Y' / 'take this note' — handled entirely here, no AI model call, so
+    # none of it costs a free-message credit. Skipped whenever an image or
+    # document is attached so that kind of turn can never get mistaken for
+    # note-taking.
+    if message and not image_data and not document_text:
+        if request_router.is_show_notes_intent(message):
+            return _ai_show_notes_response(request, conversation)
+        delete_target = request_router.match_delete_note(message)
+        if delete_target is not None:
+            return _ai_delete_note_response(request, conversation, delete_target)
+        edit_match = request_router.match_edit_note(message)
+        if edit_match is not None:
+            return _ai_edit_note_response(request, conversation, edit_match[0], edit_match[1])
+        if request_router.is_note_intent(message):
+            return _ai_save_note_response(request, conversation, message)
 
     if not request.user.is_authenticated:
         request.session['ai_guest_msg_count'] = request.session.get('ai_guest_msg_count', 0) + 1

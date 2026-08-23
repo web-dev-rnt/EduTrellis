@@ -89,3 +89,66 @@ def strip_note_intent(text):
         if match:
             return (text[:match.start()] + text[match.end():]).strip()
     return text.strip()
+
+
+# ---- "show / delete / edit my notes" — same idea, for the rest of the My
+# Notes lifecycle beyond just saving one. ----
+_SHOW_NOTES_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in (
+        r"\b(?:show|list|see|open|read)\s+(?:me\s+)?my\s+notes?\b",
+        r"\bwhat\s+notes?\s+do\s+i\s+have\b",
+        r"\bwhat\s+(?:have\s+i|did\s+i)\s+(?:saved?|noted?)\b",
+    )
+]
+
+# Captures an optional 'all'/'my'/'the' prefix (group 1) separately from
+# whatever comes after 'note(s)' (group 2, the target to search for) — 'all'
+# in the prefix means every note, not one to search for by name.
+_DELETE_NOTE_RE = re.compile(
+    r"\b(?:delete|remove|clear)\s+((?:the\s+|my\s+|all\s+(?:my\s+)?)?)notes?\b(.*)$",
+    re.IGNORECASE,
+)
+# Non-greedy up to the first standalone 'to' splits '<target> to <new text>'
+# — this misreads a target that itself contains the word 'to' (e.g. 'note
+# about how to bake bread'), but that's an acceptable miss for a
+# dependency-free heuristic; the caller already handles "couldn't find a
+# note matching that" gracefully either way.
+_EDIT_NOTE_RE = re.compile(
+    r"\b(?:edit|update|change)\s+(?:the\s+|my\s+)?note\b(.*?)\bto\b(.*)$",
+    re.IGNORECASE,
+)
+_TARGET_PREFIX_RE = re.compile(r"^\s*(?:about|for|called|titled|on|regarding)\b", re.IGNORECASE)
+_CONTENT_PREFIX_RE = re.compile(r"^\s*(?:say|read|be)\b", re.IGNORECASE)
+
+DELETE_ALL_NOTES = '__ALL__'
+
+
+def is_show_notes_intent(text):
+    """True for 'show my notes', 'what notes do I have', etc."""
+    text = text or ''
+    return any(pattern.search(text) for pattern in _SHOW_NOTES_PATTERNS)
+
+
+def match_delete_note(text):
+    """None if `text` isn't a 'delete note...' request at all. Otherwise
+    DELETE_ALL_NOTES for 'delete all my notes', or the (possibly empty)
+    target phrase to search for, e.g. 'delete note about milk' -> 'milk'."""
+    match = _DELETE_NOTE_RE.search(text or '')
+    if not match:
+        return None
+    if 'all' in (match.group(1) or '').lower():
+        return DELETE_ALL_NOTES
+    target = _TARGET_PREFIX_RE.sub('', match.group(2) or '')
+    return target.strip(' :-—').strip()
+
+
+def match_edit_note(text):
+    """None if `text` isn't an 'edit note ... to ...' request. Otherwise a
+    (target, new_content) tuple — either half can be empty if the phrasing
+    didn't include one, which the caller should treat as "ask for more"."""
+    match = _EDIT_NOTE_RE.search(text or '')
+    if not match:
+        return None
+    target = _TARGET_PREFIX_RE.sub('', match.group(1) or '').strip(' :-—').strip()
+    new_content = _CONTENT_PREFIX_RE.sub('', match.group(2) or '').strip(' :-—').strip()
+    return target, new_content

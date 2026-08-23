@@ -2753,7 +2753,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       isSumudrika = resp.headers.get('X-Sumudrika') === '1';
       isJagu = resp.headers.get('X-Jagu') === '1';
       isPersonaEnd = resp.headers.get('X-Persona-End') === '1';
-      noteSaved = resp.headers.get('X-Note-Saved') === '1';
+      noteSaved = resp.headers.get('X-Notes-Changed') === '1';
       if (!AI_AUTHENTICATED) { state.guestUsed += 1; updateGuestMeter(); }
 
       if (!resp.body || !resp.body.getReader){
