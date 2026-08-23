@@ -777,12 +777,17 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
             "here:\n" + account_context
         )
     if retrieved_context:
-        source_label = "EduTrellis's saved knowledge base" if retrieved_source == 'knowledge_base' else 'a live web search'
+        source_label = {
+            'knowledge_base': "EduTrellis's saved knowledge base",
+            'company_site': "EduTrellis's verified public website data",
+        }.get(retrieved_source, 'a live web search')
         system_prompt += (
             f"\n\nFor this reply, here is relevant information retrieved from "
             f"{source_label} — use it as your primary source for factual "
             "claims in this answer instead of guessing from general "
-            "knowledge. If it doesn't actually answer the question, say so "
+            "knowledge. Treat exact facts in this context as authoritative, "
+            "never replace them with remembered or invented details, and cite "
+            "only URLs actually present in it. If it doesn't answer the question, say so "
             "rather than making something up:\n" + retrieved_context
         )
     if language and language != DEFAULT_LANGUAGE:

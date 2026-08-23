@@ -64,6 +64,10 @@ _NOTE_INTENT_PATTERNS = [
     re.compile(p, re.IGNORECASE) for p in (
         r"\btake (?:a |this )?note\b",
         r"\bmake (?:a |this )?note\b",
+        r"\bcreate (?:a |this )?note\b",
+        r"\badd (?:a |this )?note\b",
+        r"\bwrite (?:a |this )?note\b",
+        r"\bsave (?:a |this )?note\b",
         r"\bnote (?:it |this |that )?down\b",
         r"\bjot (?:it |this |that )?down\b",
         r"\bsave (?:the |all |my )?details?\b",
@@ -95,11 +99,16 @@ def strip_note_intent(text):
 # Notes lifecycle beyond just saving one. ----
 _SHOW_NOTES_PATTERNS = [
     re.compile(p, re.IGNORECASE) for p in (
-        r"\b(?:show|list|see|open|read)\s+(?:me\s+)?my\s+notes?\b",
+        r"\b(?:show|list|see)\s+(?:me\s+)?my\s+notes?\b",
         r"\bwhat\s+notes?\s+do\s+i\s+have\b",
         r"\bwhat\s+(?:have\s+i|did\s+i)\s+(?:saved?|noted?)\b",
     )
 ]
+
+_READ_NOTE_RE = re.compile(
+    r"\b(?:open|read|show|view)\s+(?:me\s+)?(?:my\s+|the\s+)?note\s+(.+?)\s*$",
+    re.IGNORECASE,
+)
 
 # Captures an optional 'all'/'my'/'the' prefix (group 1) separately from
 # whatever comes after 'note(s)' (group 2, the target to search for) — 'all'
@@ -114,7 +123,7 @@ _DELETE_NOTE_RE = re.compile(
 # dependency-free heuristic; the caller already handles "couldn't find a
 # note matching that" gracefully either way.
 _EDIT_NOTE_RE = re.compile(
-    r"\b(?:edit|update|change)\s+(?:the\s+|my\s+)?note\b(.*?)\bto\b(.*)$",
+    r"\b(?:edit|update|change)\s+(?:the\s+|my\s+)?note\b(.*?)(?:\bto\b(.*))?$",
     re.IGNORECASE,
 )
 _TARGET_PREFIX_RE = re.compile(r"^\s*(?:about|for|called|titled|on|regarding)\b", re.IGNORECASE)
@@ -127,6 +136,14 @@ def is_show_notes_intent(text):
     """True for 'show my notes', 'what notes do I have', etc."""
     text = text or ''
     return any(pattern.search(text) for pattern in _SHOW_NOTES_PATTERNS)
+
+
+def match_read_note(text):
+    """Return the number/title requested by 'open note 1', etc."""
+    match = _READ_NOTE_RE.search(text or '')
+    if not match:
+        return None
+    return _TARGET_PREFIX_RE.sub('', match.group(1) or '').strip(' :-').strip()
 
 
 def match_delete_note(text):

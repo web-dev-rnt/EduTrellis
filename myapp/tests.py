@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.test import RequestFactory
 from django.test import TestCase, override_settings
 
-from . import ai_chat, doc_extract, privacy, request_router
+from . import ai_chat, company_knowledge, doc_extract, privacy, request_router
 from .middleware import CanonicalHostMiddleware, PublicAssetCacheMiddleware
 from .models import AIConversation, AIMessage, Cart, Category, Product, StoreProfile
 from .views import AI_CURRENT_CONVERSATION_SESSION_KEY, _ai_document_instruction
@@ -87,6 +87,18 @@ class AIResponseReliabilityTests(TestCase):
         self.assertEqual(request_router.classify('Research the latest facts and sources'), 'research')
         self.assertEqual(request_router.classify('Hello, how are you?'), 'general')
         self.assertEqual(request_router.choose_model('Fix this JavaScript bug', 'quick')[0], 'code')
+
+    def test_note_router_understands_numbered_read_and_edit_commands(self):
+        self.assertEqual(request_router.match_read_note('open note 1'), '1')
+        self.assertEqual(request_router.match_read_note('read my note #2'), '#2')
+        self.assertEqual(request_router.match_edit_note('edit note 1'), ('1', ''))
+        self.assertEqual(request_router.match_edit_note('edit note 1 to Call at 7'), ('1', 'Call at 7'))
+        self.assertTrue(request_router.is_note_intent('create a note: Call at 7'))
+
+    def test_company_context_contains_public_contacts_and_prices(self):
+        self.assertTrue(company_knowledge.is_company_query('what is the sales team number?'))
+        self.assertIn('+91 96959 53183', company_knowledge.PUBLIC_SITE_CONTEXT)
+        self.assertIn('₹8,999', company_knowledge.PUBLIC_SITE_CONTEXT)
 
     @override_settings(AI_USE_PRESIDIO=False)
     def test_fast_privacy_path_redacts_common_identifiers(self):

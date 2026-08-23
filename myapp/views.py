@@ -43,7 +43,7 @@ from myapp import dropbox_backup
 from myapp import ai_chat
 from myapp import github_ops
 from myapp import doc_extract
-from myapp import light_mode
+from myapp import light_mode, company_knowledge
 from myapp import product_search
 from myapp import image_ocr
 from myapp import privacy
@@ -1520,6 +1520,47 @@ def dashboard_ai_activity_detail(request, pk):
 
 
 @dashboard_staff_required
+def dashboard_ai_reports(request):
+    """Every 'report this reply' submission from the AI chat (see the
+    Report button under each reply, and ai_report_submit) — who reported
+    it (account, with the email/login to follow up with, or guest
+    session), what reply they flagged, and why — grouped by open/resolved
+    so staff can see what still needs attention."""
+    q = request.GET.get('q', '').strip()
+    reports = AIReport.objects.select_related('user', 'conversation').order_by('-created_at')
+    if q:
+        reports = reports.filter(
+            Q(user__email__icontains=q) | Q(user__username__icontains=q) |
+            Q(session_key__icontains=q) | Q(explanation__icontains=q) |
+            Q(reported_reply__icontains=q)
+        )
+    all_reports = list(reports)
+    groups = [
+        {'status': value, 'label': label, 'reports': [r for r in all_reports if r.status == value]}
+        for value, label in AIReport.STATUS_CHOICES
+    ]
+    return render(request, 'dashboard/ai_reports.html', {
+        'active': 'ai_reports', 'reports': all_reports, 'groups': groups, 'q': q,
+    })
+
+
+@dashboard_staff_required
+def dashboard_ai_report_status_update(request, pk):
+    if request.method == 'POST':
+        report = get_object_or_404(AIReport, pk=pk)
+        report.status = AIReport.STATUS_RESOLVED if report.status == AIReport.STATUS_OPEN else AIReport.STATUS_OPEN
+        report.save(update_fields=['status'])
+    return redirect('dashboard_ai_reports')
+
+
+@dashboard_staff_required
+def dashboard_ai_report_delete(request, pk):
+    if request.method == 'POST':
+        get_object_or_404(AIReport, pk=pk).delete()
+    return redirect('dashboard_ai_reports')
+
+
+@dashboard_staff_required
 def dashboard_ai_block(request):
     if request.method == 'POST':
         ip_address = request.POST.get('ip_address', '').strip()
@@ -2262,22 +2303,48 @@ def _ai_show_notes_response(request, conversation):
     """'Show my notes' / 'what notes do I have' (see
     request_router.is_show_notes_intent) — lists the user's saved notes
     right in the chat, newest first."""
-    notes = list(AINote.objects.filter(_ai_owner_filter(request)).order_by('-created_at')[:20])
+    notes = list(AINote.objects.filter(_ai_owner_filter(request)).order_by('-created_at', '-pk')[:20])
     if not notes:
         confirmation = 'You don\'t have any saved notes yet — say something like "note it down" after a reply to save one.'
     else:
         lines = [
-            f"- **{n.heading or 'Untitled note'}** _( {timezone.localtime(n.created_at).strftime('%b %d, %Y at %I:%M %p')} )_"
-            for n in notes
+            f"{index}. **{n.heading or 'Untitled note'}** _({timezone.localtime(n.created_at).strftime('%b %d, %Y at %I:%M %p')})_"
+            for index, n in enumerate(notes, 1)
         ]
         confirmation = "📒 Here are your saved notes:\n\n" + '\n'.join(lines)
     return _ai_note_action_reply(request, conversation, confirmation)
 
 
 def _ai_matching_notes(request, target):
+    ordinal = re.fullmatch(r"(?:number\s*|#\s*)?(\d+)(?:st|nd|rd|th)?", (target or '').strip(), re.IGNORECASE)
+    if ordinal:
+        position = int(ordinal.group(1))
+        if position < 1:
+            return []
+        note = AINote.objects.filter(_ai_owner_filter(request)).order_by('-created_at', '-pk')[position - 1:position].first()
+        return [note] if note else []
     return list(AINote.objects.filter(_ai_owner_filter(request)).filter(
         Q(heading__icontains=target) | Q(content__icontains=target),
     )[:6])
+
+
+def _ai_read_note_response(request, conversation, target):
+    """Open one owned note by its displayed number or a unique title phrase."""
+    if not target:
+        return _ai_note_action_reply(request, conversation, 'Tell me which note to open, e.g. "open note 1".')
+    matches = _ai_matching_notes(request, target)
+    if not matches:
+        return _ai_note_action_reply(request, conversation, f'I couldn\'t find a note matching "{target}".')
+    if len(matches) > 1:
+        listing = '\n'.join(f"- {n.heading or 'Untitled note'}" for n in matches)
+        return _ai_note_action_reply(request, conversation, f"I found more than one matching note:\n\n{listing}\n\nUse its number from \"show my notes\" or a more specific title.")
+    note = matches[0]
+    created = timezone.localtime(note.created_at).strftime('%b %d, %Y at %I:%M %p')
+    return _ai_note_action_reply(
+        request, conversation,
+        f"**{note.heading or 'Untitled note'}**\n\n{note.content}\n\n_Saved {created}_",
+        {'X-Note-Id': str(note.id)},
+    )
 
 
 def _ai_delete_note_response(request, conversation, target):
@@ -2313,7 +2380,7 @@ def _ai_delete_note_response(request, conversation, target):
 def _ai_edit_note_response(request, conversation, target, new_content):
     """'Edit/update/change note about X to Y' (see
     request_router.match_edit_note)."""
-    if not target or not new_content:
+    if not target:
         confirmation = 'Tell me which note to edit and the new text, e.g. "edit note about milk to buy bread and eggs".'
         return _ai_note_action_reply(request, conversation, confirmation)
 
@@ -2327,6 +2394,12 @@ def _ai_edit_note_response(request, conversation, target, new_content):
         return _ai_note_action_reply(request, conversation, confirmation)
 
     note = matches[0]
+    if not new_content:
+        confirmation = (
+            f"**{note.heading or 'Untitled note'}**\n\n{note.content}\n\n"
+            f'To replace it, say: "edit note {target} to [your new text]".'
+        )
+        return _ai_note_action_reply(request, conversation, confirmation, {'X-Note-Id': str(note.id)})
     note.content = new_content
     note.heading = _ai_note_heading(new_content)
     note.save(update_fields=['content', 'heading'])
@@ -2499,6 +2572,9 @@ def ai_chat_send(request):
     # document is attached so that kind of turn can never get mistaken for
     # note-taking.
     if message and not image_data and not document_text:
+        read_target = request_router.match_read_note(message)
+        if read_target is not None:
+            return _ai_read_note_response(request, conversation, read_target)
         if request_router.is_show_notes_intent(message):
             return _ai_show_notes_response(request, conversation)
         delete_target = request_router.match_delete_note(message)
@@ -2627,7 +2703,14 @@ def ai_chat_send(request):
     # separately since it's the one path here that costs real search-API
     # quota — when nothing relevant is already saved.
     retrieved_context = retrieved_source = None
-    if model_key == 'light' and message:
+    recent_company_text = ' '.join(
+        str(item.get('content') or '') for item in recent[-5:]
+        if isinstance(item.get('content'), str)
+    )
+    if message and company_knowledge.is_company_query(recent_company_text):
+        retrieved_context = company_knowledge.PUBLIC_SITE_CONTEXT
+        retrieved_source = 'company_site'
+    elif model_key == 'light' and message:
         search_started = time.perf_counter()
         kb_entries = light_mode.search_knowledge_base(
             message,
@@ -2723,7 +2806,7 @@ def ai_chat_send(request):
                 # close to him, never something worth remembering as a
                 # reusable "fact". Never blocks or fails the actual chat
                 # reply if this errors.
-                if not is_sumudrika and not is_jagu:
+                if not is_sumudrika and not is_jagu and retrieved_source != 'company_site':
                     try:
                         light_mode.save_from_chat(
                             message, full_reply, account_context=account_context,
