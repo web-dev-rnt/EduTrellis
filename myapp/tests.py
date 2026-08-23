@@ -10,7 +10,7 @@ from django.test import TestCase, override_settings
 
 from . import ai_chat, company_knowledge, doc_extract, privacy, request_router
 from .middleware import CanonicalHostMiddleware, PublicAssetCacheMiddleware
-from .models import AIConversation, AIMessage, Cart, Category, Product, StoreProfile
+from .models import AIConversation, AIMessage, AINote, Cart, Category, Product, StoreProfile
 from .views import AI_CURRENT_CONVERSATION_SESSION_KEY, _ai_document_instruction
 
 
@@ -127,6 +127,55 @@ class AIResponseReliabilityTests(TestCase):
             create.create.call_args_list[1].kwargs['model'],
             ai_chat.MODELS['quick']['id'],
         )
+
+
+class AINoteCRUDTests(TestCase):
+    """Exercises My Notes end-to-end through /AI/api/send/, not just the
+    request_router regex parsing — request_router.match_read_note/
+    match_edit_note being correct in isolation once shipped with a plain
+    `re.fullmatch(...)` call in views._ai_matching_notes with no `import re`
+    at the top of views.py, which 500'd every read/edit/delete-by-number
+    request while create/show (which never call that function) kept working
+    silently. A regex-level unit test alone can't catch that class of bug."""
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='note-crud@example.com', email='note-crud@example.com', password='test-password-123',
+        )
+        StoreProfile.objects.create(user=self.user, phone='9999999999')
+        self.client.force_login(self.user)
+
+    def send(self, message, conversation_id=None):
+        payload = {'message': message}
+        if conversation_id:
+            payload['conversation_id'] = conversation_id
+        response = self.client.post('/AI/api/send/', data=json.dumps(payload), content_type='application/json')
+        body = b''.join(response.streaming_content).decode('utf-8')
+        self.assertEqual(response.status_code, 200, msg=body)
+        return response, body
+
+    def test_full_note_lifecycle_via_chat(self):
+        response, _ = self.send('note down: buy milk and eggs')
+        conversation_id = int(response['X-Conversation-Id'])
+        self.send('note down: call dentist tomorrow', conversation_id)
+        self.assertEqual(AINote.objects.filter(user=self.user).count(), 2)
+
+        _, show_body = self.send('show my notes', conversation_id)
+        self.assertIn('buy milk and eggs', show_body)
+        self.assertIn('call dentist tomorrow', show_body)
+
+        _, read_body = self.send('open note 1', conversation_id)
+        self.assertIn('call dentist tomorrow', read_body)
+
+        edit_response, edit_body = self.send('edit note about milk to buy milk, eggs and bread', conversation_id)
+        self.assertEqual(edit_response['X-Notes-Changed'], '1')
+        self.assertIn('buy milk, eggs and bread', AINote.objects.get(heading__icontains='bread').content)
+
+        delete_response, delete_body = self.send('delete note about dentist', conversation_id)
+        self.assertEqual(delete_response['X-Notes-Changed'], '1')
+        self.assertEqual(AINote.objects.filter(user=self.user).count(), 1)
+
+        self.send('delete all my notes', conversation_id)
+        self.assertEqual(AINote.objects.filter(user=self.user).count(), 0)
 
 
 class PublicPagePerformanceAndSEOTests(TestCase):
