@@ -45,16 +45,16 @@
  "@type":"LocalBusiness",
  "name":"EduTrellis",
  "url":"https://www.edutrellis.in",
- "telephone":"+91-96959-53183",
- "email":"support@edutrellis.in",
+ "telephone":"{{ BIZ.phone_e164 }}",
+ "email":"{{ BIZ.email_support }}",
  "image":"https://www.edutrellis.in{% static 'img/og-cover.jpg' %}",
  "address":{
    "@type":"PostalAddress",
-   "streetAddress":"P-109, Prembagh, Shahpur, Chinhat",
-   "addressLocality":"Lucknow",
-   "addressRegion":"Uttar Pradesh",
-   "postalCode":"226028",
-   "addressCountry":"IN"
+   "streetAddress":"{{ BIZ.address_street }}",
+   "addressLocality":"{{ BIZ.address_city }}",
+   "addressRegion":"{{ BIZ.address_state }}",
+   "postalCode":"{{ BIZ.address_zip }}",
+   "addressCountry":"{{ BIZ.address_country }}"
  },
  "areaServed":"India",
  "description":"Website Development, SEO Services, Meta Ads, Website Management, WordPress and Django Development.",
@@ -66,6 +66,10 @@
 }
 </script>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -293,24 +297,24 @@
   <div class="strip-inner">
 
     <!-- Email -->
-    <a href="mailto:support@edutrellis.in"
+    <a href="mailto:{{ BIZ.email_support }}"
        class="strip-link strip-email-link"
        aria-label="Email us">
       <i class="fas fa-envelope"></i>
-      <span class="strip-txt">support@edutrellis.in</span>
+      <span class="strip-txt">{{ BIZ.email_support }}</span>
     </a>
 
     <span class="strip-sep"></span>
 
     <!-- WhatsApp -->
-    <a href="https://wa.me/919695953183"
+    <a href="{{ BIZ.whatsapp_link }}"
        class="strip-link"
        aria-label="WhatsApp"
        target="_blank"
        rel="noopener noreferrer">
       <i class="fab fa-whatsapp"></i>
       <span class="strip-txt">WhatsApp:</span>
-      <span>+91&nbsp;96959&nbsp;53183</span>
+      <span>{{ BIZ.phone_display }}</span>
     </a>
 
     <span class="strip-sep"></span>
@@ -1027,7 +1031,7 @@ document.querySelectorAll('.gallery-imgbox').forEach(el => {
       <div class="about-text reveal-right">
         <h3>Vijay Tiwari</h3>
         <p style="font-size:.85rem;color:var(--red);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-top:-.5rem">Founder &amp; CEO, EduTrellis</p>
-        <p style="font-size:.9rem;color:var(--text);display:flex;align-items:center;gap:.5rem;margin-top:.3rem"><i class="fas fa-envelope" style="color:var(--red)"></i> <a href="mailto:ceo@edutrellis.in" style="color:var(--text);text-decoration:none">ceo@edutrellis.in</a></p>
+        <p style="font-size:.9rem;color:var(--text);display:flex;align-items:center;gap:.5rem;margin-top:.3rem"><i class="fas fa-envelope" style="color:var(--red)"></i> <a href="mailto:{{ BIZ.email_ceo }}" style="color:var(--text);text-decoration:none">{{ BIZ.email_ceo }}</a></p>
         <p style="margin-top:1rem">Our founder started EduTrellis in 2020 with a simple goal — to make professional digital growth accessible and affordable for every business and educator in India.</p>
         <p>Today, that vision has grown into a trusted digital partner serving 1200+ clients, built on transparency, hard work and genuine care for every client's success.</p>
         <h3 style="margin-top:1.5rem">Founder's Belief</h3>
@@ -1042,7 +1046,7 @@ document.querySelectorAll('.gallery-imgbox').forEach(el => {
           <p>"I started EduTrellis because I saw how many great businesses were being held back by outdated or missing websites. Every client we work with becomes part of our journey — and their growth is what drives us every single day."</p>
         </div>
         <div class="about-btns">
-          <a href="mailto:ceo@edutrellis.in" class="cta-btn">Connect With Us <i class="fas fa-arrow-right"></i></a>
+          <a href="mailto:{{ BIZ.email_ceo }}" class="cta-btn">Connect With Us <i class="fas fa-arrow-right"></i></a>
           <a href="https://www.linkedin.com/in/vijaytiwariii/" target="_blank" rel="noopener noreferrer" class="cta-btn" style="background:#0077b5;box-shadow:0 8px 26px rgba(0,119,181,.35);"><i class="fab fa-linkedin-in"></i> LinkedIn</a>
         </div>
       </div>
@@ -1101,7 +1105,7 @@ document.querySelectorAll('.gallery-imgbox').forEach(el => {
         </div>
         <div class="about-btns">
           <a href="#contact" class="cta-btn">Book FREE Consultation <i class="fas fa-arrow-right"></i></a>
-          <a href="https://wa.me/919695953183" target="_blank" rel="noopener noreferrer" class="cta-btn" style="background:linear-gradient(135deg,#25d366,#1da851);box-shadow:0 8px 26px rgba(37,211,102,.35);"><i class="fab fa-whatsapp"></i> WhatsApp Us</a>
+          <a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener noreferrer" class="cta-btn" style="background:linear-gradient(135deg,#25d366,#1da851);box-shadow:0 8px 26px rgba(37,211,102,.35);"><i class="fab fa-whatsapp"></i> WhatsApp Us</a>
         </div>
         <div style="margin-top:.9rem">
           <p style="font-size:.82rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Connect With Us</p>
@@ -1124,12 +1128,12 @@ document.querySelectorAll('.gallery-imgbox').forEach(el => {
     <div class="contact-grid">
       <div class="contact-info reveal-left">
         <h3>Get In Touch</h3>
-        <div class="ci-item"><div class="ci-icon"><i class="fas fa-envelope"></i></div><div><h4>Email Support</h4><a href="mailto:support@edutrellis.in">support@edutrellis.in</a></div></div>
-        <div class="ci-item"><div class="ci-icon"><i class="fas fa-envelope"></i></div><div><h4>Email CEO</h4><a href="mailto:ceo@edutrellis.in">ceo@edutrellis.in</a></div></div>
-        <div class="ci-item"><div class="ci-icon"><i class="fas fa-map-marker-alt"></i></div><div><h4>Our Office</h4><p style="font-size:.92rem;color:var(--text);margin:0;line-height:1.6">P-109, Prembagh, Shahpur, Chinhat,<br>Lucknow, Uttar Pradesh 226028</p></div></div>
-        <a href="https://wa.me/919695953183" target="_blank" rel="noopener noreferrer" class="whatsapp-cta">
+        <div class="ci-item"><div class="ci-icon"><i class="fas fa-envelope"></i></div><div><h4>Email Support</h4><a href="mailto:{{ BIZ.email_support }}">{{ BIZ.email_support }}</a></div></div>
+        <div class="ci-item"><div class="ci-icon"><i class="fas fa-envelope"></i></div><div><h4>Email CEO</h4><a href="mailto:{{ BIZ.email_ceo }}">{{ BIZ.email_ceo }}</a></div></div>
+        <div class="ci-item"><div class="ci-icon"><i class="fas fa-map-marker-alt"></i></div><div><h4>Our Office</h4><p style="font-size:.92rem;color:var(--text);margin:0;line-height:1.6">{{ BIZ.address_street }},<br>{{ BIZ.address_city }}, {{ BIZ.address_state }} {{ BIZ.address_zip }}</p></div></div>
+        <a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener noreferrer" class="whatsapp-cta">
           <i class="fab fa-whatsapp"></i>
-          <div><span>Chat on WhatsApp</span><small>+91 96959 53183 — We reply fast</small></div>
+          <div><span>Chat on WhatsApp</span><small>{{ BIZ.phone_display }} — We reply fast</small></div>
         </a>
         <div class="biz-hours">
           <h4><i class="fas fa-clock" style="margin-right:.5rem;color:var(--red)"></i>Business Hours</h4>
@@ -1203,7 +1207,7 @@ document.querySelectorAll('.gallery-imgbox').forEach(el => {
         <a href="https://www.facebook.com/profile.php?id=61590850943948" title="Facebook" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><i class="fab fa-facebook-f"></i></a>
         <a href="https://www.instagram.com/edutrellis" title="Instagram" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><i class="fab fa-instagram"></i></a>
         <a href="https://www.linkedin.com/company/edutrellis" title="LinkedIn" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer"><i class="fab fa-linkedin-in"></i></a>
-        <a href="https://wa.me/919695953183" title="WhatsApp" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a>
+        <a href="{{ BIZ.whatsapp_link }}" title="WhatsApp" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a>
       </div>
     </div>
 
@@ -1235,10 +1239,10 @@ document.querySelectorAll('.gallery-imgbox').forEach(el => {
 
     <div class="foot-col">
       <h4>Contact</h4>
-      <div class="foot-contact-item"><i class="fas fa-envelope"></i><a href="mailto:support@edutrellis.in">support@edutrellis.in</a></div>
-      <div class="foot-contact-item"><i class="fas fa-user-tie"></i><a href="mailto:ceo@edutrellis.in">ceo@edutrellis.in (CEO)</a></div>
-      <div class="foot-contact-item"><i class="fab fa-whatsapp"></i><a href="https://wa.me/919695953183" target="_blank" rel="noopener noreferrer">+91 96959 53183 (WhatsApp)</a></div>
-      <div class="foot-contact-item"><i class="fas fa-map-marker-alt"></i><span>P-109, Prembagh, Shahpur, Chinhat, Lucknow, UP 226028</span></div>
+      <div class="foot-contact-item"><i class="fas fa-envelope"></i><a href="mailto:{{ BIZ.email_support }}">{{ BIZ.email_support }}</a></div>
+      <div class="foot-contact-item"><i class="fas fa-user-tie"></i><a href="mailto:{{ BIZ.email_ceo }}">{{ BIZ.email_ceo }} (CEO)</a></div>
+      <div class="foot-contact-item"><i class="fab fa-whatsapp"></i><a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener noreferrer">{{ BIZ.phone_display }} (WhatsApp)</a></div>
+      <div class="foot-contact-item"><i class="fas fa-map-marker-alt"></i><span>{{ BIZ.address_short }}</span></div>
       <div class="foot-contact-item"><i class="fab fa-instagram"></i><a href="https://www.instagram.com/edutrellis" target="_blank" rel="noopener noreferrer">@edutrellis</a></div>
       <div class="foot-contact-item"><i class="fab fa-facebook-f"></i><a href="https://www.facebook.com/profile.php?id=61590850943948" target="_blank" rel="noopener noreferrer">EduTrellis on Facebook</a></div>
       <div class="foot-contact-item"><i class="fab fa-linkedin-in"></i><a href="https://www.linkedin.com/company/edutrellis" target="_blank" rel="noopener noreferrer">EduTrellis on LinkedIn</a></div>
@@ -1257,7 +1261,7 @@ document.querySelectorAll('.gallery-imgbox').forEach(el => {
 
 <!-- FLOATING WA -->
 <div class="wa-float">
-  <a href="https://wa.me/919695953183" target="_blank" rel="noopener noreferrer" title="Chat on WhatsApp" aria-label="Chat on WhatsApp">
+  <a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener noreferrer" title="Chat on WhatsApp" aria-label="Chat on WhatsApp">
     <i class="fab fa-whatsapp"></i>
   </a>
 </div>
@@ -1321,14 +1325,14 @@ document.addEventListener('keydown', function(e){
  "@context": "https://schema.org",
  "@type": "LocalBusiness",
  "name": "EduTrellis",
- "email": "support@edutrellis.in",
+ "email": "{{ BIZ.email_support }}",
  "address": {
    "@type": "PostalAddress",
-   "streetAddress": "P-109, Prembagh, Shahpur, Chinhat",
-   "addressLocality": "Lucknow",
-   "addressRegion": "Uttar Pradesh",
-   "postalCode": "226028",
-   "addressCountry": "IN"
+   "streetAddress": "{{ BIZ.address_street }}",
+   "addressLocality": "{{ BIZ.address_city }}",
+   "addressRegion": "{{ BIZ.address_state }}",
+   "postalCode": "{{ BIZ.address_zip }}",
+   "addressCountry": "{{ BIZ.address_country }}"
  },
  "url": "https://www.edutrellis.in"
 }

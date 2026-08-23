@@ -2262,7 +2262,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       return;
     }
     notesList.innerHTML = '';
-    state.notes.forEach(function(n){
+    state.notes.forEach(function(n, index){
       var item = document.createElement('div');
       item.className = 'note-item';
       item.setAttribute('data-id', n.id);
@@ -2272,7 +2272,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       icon.className = 'fas fa-note-sticky conv-icon';
       var title = document.createElement('span');
       title.className = 'conv-title';
-      title.textContent = n.heading || 'Untitled note';
+      title.textContent = (index + 1) + '. ' + (n.heading || 'Untitled note');
       var del = document.createElement('button');
       del.type = 'button';
       del.className = 'conv-del';
@@ -2289,7 +2289,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       date.className = 'note-item-date';
       date.textContent = new Date(n.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
       item.appendChild(head);
-      item.appendChild(body);
+      if ((n.heading || '').trim() !== (n.content || '').trim()) item.appendChild(body);
       item.appendChild(date);
       notesList.appendChild(item);
     });
@@ -2311,9 +2311,15 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     var id = parseInt(del.getAttribute('data-note-del'), 10);
     fetch('/AI/api/notes/' + id + '/delete/', {
       method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken() },
-    }).then(function(){
-      state.notes = state.notes.filter(function(n){ return n.id !== id; });
-      renderNotesList();
+    }).then(function(response){
+      return response.json().then(function(data){
+        if (!response.ok || data.status !== 'ok') throw new Error(data.detail || 'Could not delete note.');
+        return refreshNotes();
+      });
+    }).catch(function(){
+      // Re-read the database even after an error; never leave optimistic or
+      // stale sidebar state on screen.
+      refreshNotes();
     });
   });
 

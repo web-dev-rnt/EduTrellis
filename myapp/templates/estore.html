@@ -36,6 +36,10 @@
 <link rel="apple-touch-icon" href="{{ pwa.icon.url }}">
 {% endif %}
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -45,17 +49,17 @@
  "@type":"OnlineStore",
  "name":"EduTrellis Store",
  "url":"https://www.edutrellis.in/store/",
- "telephone":"+91-96959-53183",
- "email":"support@edutrellis.in",
+ "telephone":"{{ BIZ.phone_e164 }}",
+ "email":"{{ BIZ.email_support }}",
  "image":"https://www.edutrellis.in{% static 'img/og-cover.jpg' %}",
  "parentOrganization":{"@type":"Organization","name":"EduTrellis","url":"https://www.edutrellis.in"},
  "address":{
    "@type":"PostalAddress",
-   "streetAddress":"P-109, Prembagh, Shahpur, Chinhat",
-   "addressLocality":"Lucknow",
-   "addressRegion":"Uttar Pradesh",
-   "postalCode":"226028",
-   "addressCountry":"IN"
+   "streetAddress":"{{ BIZ.address_street }}",
+   "addressLocality":"{{ BIZ.address_city }}",
+   "addressRegion":"{{ BIZ.address_state }}",
+   "postalCode":"{{ BIZ.address_zip }}",
+   "addressCountry":"{{ BIZ.address_country }}"
  },
  "areaServed":"India",
  "sameAs":[
@@ -65,6 +69,9 @@
  ]
 }
 </script>
+{% if product_schema_json %}
+<script type="application/ld+json">{{ product_schema_json|safe }}</script>
+{% endif %}
 
 <style>
 /* ============================================================
@@ -798,9 +805,9 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
 <!-- ==================== TOP STRIP ==================== -->
 <div class="top-strip">
   <div class="strip-inner">
-    <a href="mailto:support@edutrellis.in" class="strip-link"><i class="fas fa-envelope"></i><span>support@edutrellis.in</span></a>
+    <a href="mailto:{{ BIZ.email_support }}" class="strip-link"><i class="fas fa-envelope"></i><span>{{ BIZ.email_support }}</span></a>
     <span class="strip-sep"></span>
-    <a href="https://wa.me/919695953183" class="strip-link" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i><span>+91&nbsp;96959&nbsp;53183</span></a>
+    <a href="{{ BIZ.whatsapp_link }}" class="strip-link" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i><span>{{ BIZ.phone_display }}</span></a>
     <span class="strip-sep"></span>
     <a href="https://www.instagram.com/edutrellis" class="strip-link" target="_blank" rel="noopener"><i class="fab fa-instagram"></i><span>@edutrellis</span></a>
     <span class="strip-sep"></span>
@@ -973,7 +980,7 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
       {% for cat in categories %}
       <div class="cat-card reveal d{{ forloop.counter }}" data-jump="{{ cat.slug }}">
         <div class="cat-ico">
-          {% if cat.image %}<img src="{{ cat.image.url }}" alt="{{ cat.name }}">{% else %}<i class="fas fa-tag"></i>{% endif %}
+          {% if cat.image %}<img src="{{ cat.image.url }}" alt="{{ cat.name }}" loading="lazy" decoding="async">{% else %}<i class="fas fa-tag"></i>{% endif %}
         </div>
         <h4>{{ cat.name }}</h4>
         <p>{{ cat.description }}</p>
@@ -1124,13 +1131,13 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
 
     <div class="contact-grid">
       <div class="reveal d1">
-        <div class="ci-item"><div class="ci-icon"><i class="fas fa-envelope"></i></div><div><h4>Order support</h4><a href="mailto:support@edutrellis.in">support@edutrellis.in</a></div></div>
-        <div class="ci-item"><div class="ci-icon"><i class="fas fa-boxes-stacked"></i></div><div><h4>Bulk &amp; corporate orders</h4><a href="mailto:ceo@edutrellis.in">ceo@edutrellis.in</a></div></div>
-        <div class="ci-item"><div class="ci-icon"><i class="fas fa-location-dot"></i></div><div><h4>Warehouse &amp; office</h4><p>P-109, Prembagh, Shahpur, Chinhat,<br>Lucknow, Uttar Pradesh 226028</p></div></div>
+        <div class="ci-item"><div class="ci-icon"><i class="fas fa-envelope"></i></div><div><h4>Order support</h4><a href="mailto:{{ BIZ.email_support }}">{{ BIZ.email_support }}</a></div></div>
+        <div class="ci-item"><div class="ci-icon"><i class="fas fa-boxes-stacked"></i></div><div><h4>Bulk &amp; corporate orders</h4><a href="mailto:{{ BIZ.email_ceo }}">{{ BIZ.email_ceo }}</a></div></div>
+        <div class="ci-item"><div class="ci-icon"><i class="fas fa-location-dot"></i></div><div><h4>Warehouse &amp; office</h4><p>{{ BIZ.address_street }},<br>{{ BIZ.address_city }}, {{ BIZ.address_state }} {{ BIZ.address_zip }}</p></div></div>
 
-        <a href="https://wa.me/919695953183" target="_blank" rel="noopener" class="wa-cta">
+        <a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener" class="wa-cta">
           <i class="fab fa-whatsapp"></i>
-          <div><span>Chat on WhatsApp</span><small>+91 96959 53183 — fastest way to reach us</small></div>
+          <div><span>Chat on WhatsApp</span><small>{{ BIZ.phone_display }} — fastest way to reach us</small></div>
         </a>
 
         <div class="hours">
@@ -1203,7 +1210,7 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
         <a href="https://www.facebook.com/profile.php?id=61590850943948" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
         <a href="https://www.instagram.com/edutrellis" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
         <a href="https://www.linkedin.com/company/edutrellis" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-        <a href="https://wa.me/919695953183" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        <a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
       </div>
     </div>
 
@@ -1232,10 +1239,10 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
 
     <div class="foot-col">
       <h4>Reach us</h4>
-      <div class="foot-ci"><i class="fas fa-envelope"></i><a href="mailto:support@edutrellis.in">support@edutrellis.in</a></div>
-      <div class="foot-ci"><i class="fas fa-boxes-stacked"></i><a href="mailto:ceo@edutrellis.in">ceo@edutrellis.in</a></div>
-      <div class="foot-ci"><i class="fab fa-whatsapp"></i><a href="https://wa.me/919695953183" target="_blank" rel="noopener">+91 96959 53183</a></div>
-      <div class="foot-ci"><i class="fas fa-location-dot"></i><span>P-109, Prembagh, Shahpur, Chinhat, Lucknow, UP 226028</span></div>
+      <div class="foot-ci"><i class="fas fa-envelope"></i><a href="mailto:{{ BIZ.email_support }}">{{ BIZ.email_support }}</a></div>
+      <div class="foot-ci"><i class="fas fa-boxes-stacked"></i><a href="mailto:{{ BIZ.email_ceo }}">{{ BIZ.email_ceo }}</a></div>
+      <div class="foot-ci"><i class="fab fa-whatsapp"></i><a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener">{{ BIZ.phone_display }}</a></div>
+      <div class="foot-ci"><i class="fas fa-location-dot"></i><span>{{ BIZ.address_short }}</span></div>
       <div class="foot-ci"><i class="fas fa-globe"></i><a href="{% url 'home' %}" target="_blank" rel="noopener">edutrellis.in</a></div>
     </div>
   </div>
@@ -1569,7 +1576,7 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
 
 <!-- ==================== FLOATING ==================== -->
 <div class="wa-float">
-  <a href="https://wa.me/919695953183" target="_blank" rel="noopener" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>
+  <a href="{{ BIZ.whatsapp_link }}" target="_blank" rel="noopener" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>
 </div>
 <button id="toTop" aria-label="Back to top"><i class="fas fa-arrow-up"></i></button>
 <div class="toast-stack" id="toasts"></div>
@@ -1714,13 +1721,18 @@ function applyCartPayload(cart){
 /* ---------- 3. LOADER ---------- */
 (function loader(){
   const fill = $('#loaderFill'), pct = $('#loaderPct'), box = $('#loader');
-  let n = 0;
-  const t = setInterval(() => {
-    n += Math.random() * 13 + 4;
-    if (n >= 100){ n = 100; clearInterval(t); setTimeout(() => box.classList.add('done'), 320); }
-    fill.style.width = n + '%';
-    pct.textContent = Math.floor(n) + '%';
-  }, 110);
+  let done = false;
+  function finish(){
+    if (done) return;
+    done = true;
+    fill.style.width = '100%';
+    pct.textContent = '100%';
+    setTimeout(() => box.classList.add('done'), 120);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', finish, { once:true });
+  else finish();
+  window.addEventListener('load', finish, { once:true });
+  setTimeout(finish, 2500);
 })();
 
 /* ---------- 4. MARQUEE ---------- */
@@ -1793,7 +1805,7 @@ function renderGrid(){
     const cardImgs = (p.gallery || []).filter(s => s.type === 'image').map(s => s.url);
     const slides = cardImgs.length ? cardImgs : (p.image ? [p.image] : []);
     const mediaInner = slides.length
-      ? '<div class="p-slides">' + slides.map((u, i) => '<img class="p-slide' + (i === 0 ? ' on' : '') + '" src="' + u + '" alt="' + p.name + '">').join('') + '</div>' +
+      ? '<div class="p-slides">' + slides.map((u, i) => '<img class="p-slide' + (i === 0 ? ' on' : '') + '" ' + (i === 0 ? 'src="' + u + '"' : 'data-src="' + u + '"') + ' alt="' + p.name + '" loading="lazy" decoding="async">').join('') + '</div>' +
         (slides.length > 1 ? '<div class="p-dots">' + slides.map((u, i) => '<span class="p-dot' + (i === 0 ? ' on' : '') + '"></span>').join('') + '</div>' : '')
       : '<i class="fas ' + p.icon + '"></i>';
     return '' +
@@ -1831,11 +1843,26 @@ function startCardSliders(){
   $$('.p-media[data-slides]').forEach(media => {
     const n = Number(media.dataset.slides);
     if (n <= 1) return;
-    let idx = 0;
+    let idx = 0, loading = false;
     cardSliderTimers.push(setInterval(() => {
+      if (loading) return;
       idx = (idx + 1) % n;
-      media.querySelectorAll('.p-slide').forEach((s, i) => s.classList.toggle('on', i === idx));
-      media.querySelectorAll('.p-dot').forEach((d, i) => d.classList.toggle('on', i === idx));
+      const slides = media.querySelectorAll('.p-slide');
+      const incoming = slides[idx];
+      const activate = () => {
+        slides.forEach((s, i) => s.classList.toggle('on', i === idx));
+        media.querySelectorAll('.p-dot').forEach((d, i) => d.classList.toggle('on', i === idx));
+        loading = false;
+      };
+      if (incoming && incoming.dataset.src){
+        loading = true;
+        incoming.addEventListener('load', activate, { once:true });
+        incoming.addEventListener('error', activate, { once:true });
+        incoming.src = incoming.dataset.src;
+        delete incoming.dataset.src;
+      } else {
+        activate();
+      }
     }, 2200));
   });
 }
@@ -2488,7 +2515,7 @@ function openThankYou(success, orderId, opts){
   const num = $('#tyOrderNum');
   if (orderId){ num.style.display = 'inline-block'; num.textContent = 'Order #' + orderId; } else { num.style.display = 'none'; }
   const waMsg = encodeURIComponent('Hi, I need help with my order' + (orderId ? ' #' + orderId : '') + ' on EduTrellis Store.');
-  $('#tySupportLink').href = 'https://wa.me/919695953183?text=' + waMsg;
+  $('#tySupportLink').href = '{{ BIZ.whatsapp_link }}?text=' + waMsg;
   document.body.classList.add('locked');
   page.classList.add('open');
 }

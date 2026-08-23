@@ -69,6 +69,7 @@ _NOTE_INTENT_PATTERNS = [
         r"\badd (?:a |this )?note\b",
         r"\bwrite (?:a |this )?note\b",
         r"\bsave (?:a |this )?note\b",
+        r"\bremember (?:a |this )?note\b",
         r"\bnote (?:it |this |that )?down\b",
         r"\bjot (?:it |this |that )?down\b",
         r"\bsave (?:the |all |my )?details?\b",
@@ -88,12 +89,16 @@ def strip_note_intent(text):
     was typed along with it (e.g. 'note down: buy milk' -> 'buy milk') so
     that can be used as the note's content directly instead of falling back
     to the assistant's last reply. Safe to call even with no match."""
-    text = _typo_correct_note_keywords(text)
-    for pattern in _NOTE_INTENT_PATTERNS:
-        match = pattern.search(text)
-        if match:
-            return (text[:match.start()] + text[match.end():]).strip()
-    return text.strip()
+    original = text or ''
+    tokens = list(re.finditer(r"[A-Za-z]+", original))
+    corrected = [_typo_correct_note_keywords(token.group()).lower() for token in tokens]
+    note_index = next((i for i, word in enumerate(corrected) if word in ('note', 'notes')), None)
+    if note_index is None:
+        return ''
+    end_index = note_index
+    while end_index + 1 < len(tokens) and corrected[end_index + 1] in ('it', 'this', 'that', 'down', 'as'):
+        end_index += 1
+    return original[tokens[end_index].end():].strip(' :-—').strip()
 
 
 # A missed note command doesn't just fail quietly — the message falls
@@ -114,8 +119,10 @@ def strip_note_intent(text):
 # which would otherwise turn "she made a note about it" (a past-tense
 # remark) into a live 'make a note' command.
 _NOTE_KEYWORD_CANONICALS = (
-    'note', 'notes', 'delete', 'remove', 'clear', 'edit', 'update', 'change',
-    'show', 'list', 'open', 'read', 'view', 'take', 'make', 'create', 'save',
+    'note', 'notes', 'delete', 'remove', 'clear', 'erase', 'edit', 'update',
+    'change', 'rename', 'correct', 'show', 'list', 'open', 'read', 'view',
+    'replace', 'rewrite', 'set', 'take', 'make', 'create', 'save', 'write',
+    'add', 'remember', 'all',
 )
 _NOTE_TYPO_CORRECTION_EXCLUDE = {
     'made', 'safe', 'ready', 'oven', 'slow', 'snow', 'nose', 'node', 'chase',
@@ -139,7 +146,7 @@ def _typo_correct_note_keywords(text):
 # Notes lifecycle beyond just saving one. ----
 _SHOW_NOTES_PATTERNS = [
     re.compile(p, re.IGNORECASE) for p in (
-        r"\b(?:show|list|see)\s+(?:me\s+)?my\s+notes?\b",
+        r"\b(?:show|list|view|open|read|see)\s+(?:me\s+)?(?:all\s+)?(?:my\s+)?notes?\b\s*$",
         r"\bwhat\s+notes?\s+do\s+i\s+have\b",
         r"\bwhat\s+(?:have\s+i|did\s+i)\s+(?:saved?|noted?)\b",
     )
@@ -154,7 +161,13 @@ _READ_NOTE_RE = re.compile(
 # whatever comes after 'note(s)' (group 2, the target to search for) — 'all'
 # in the prefix means every note, not one to search for by name.
 _DELETE_NOTE_RE = re.compile(
-    r"\b(?:delete|remove|clear)\s+((?:the\s+|my\s+|all\s+(?:my\s+)?)?)notes?\b(.*)$",
+    r"\b(?:delete|remove|clear|erase)\s+((?:the\s+|my\s+|all\s+(?:my\s+)?)?)notes?\b(.*)$",
+    re.IGNORECASE,
+)
+_DELETE_NOTE_RE_TARGET_FIRST = re.compile(
+    r"\b(?:delete|remove|clear|erase)\s+(?:the\s+|my\s+)?"
+    r"(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
+    r"(?:number\s+|id\s+|#)?\d+)\s+note\b\s*$",
     re.IGNORECASE,
 )
 # Non-greedy up to the first standalone 'to' splits '<target> to <new text>'
@@ -163,13 +176,29 @@ _DELETE_NOTE_RE = re.compile(
 # dependency-free heuristic; the caller already handles "couldn't find a
 # note matching that" gracefully either way.
 _EDIT_NOTE_RE = re.compile(
-    r"\b(?:edit|update|change)\s+(?:the\s+|my\s+)?note\b(.*?)(?:\bto\b(.*))?$",
+    r"\b(?:edit|update|change|rename|correct|replace|rewrite)\s+(?:the\s+|my\s+)?(?:full\s+|entire\s+)?note\b(.*?)(?:\b(?:to|with)\b(.*))?$",
+    re.IGNORECASE,
+)
+_EDIT_NOTE_RE_TARGET_FIRST = re.compile(
+    r"\b(?:edit|update|change|rename|correct|replace|rewrite)\s+(?:the\s+|my\s+)?"
+    r"(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
+    r"(?:number\s+|id\s+|#)?\d+)\s+note\b(?:\s+(?:to|with)\s+(.*))?\s*$",
     re.IGNORECASE,
 )
 _TARGET_PREFIX_RE = re.compile(r"^\s*(?:about|for|called|titled|on|regarding)\b", re.IGNORECASE)
 _CONTENT_PREFIX_RE = re.compile(r"^\s*(?:say|read|be)\b", re.IGNORECASE)
 
 DELETE_ALL_NOTES = '__ALL__'
+_ORDINALS = {
+    'first': '1', 'second': '2', 'third': '3', 'fourth': '4', 'fifth': '5',
+    'sixth': '6', 'seventh': '7', 'eighth': '8', 'ninth': '9', 'tenth': '10',
+}
+
+
+def _normalize_note_target(target):
+    target = (target or '').strip(' :-—').strip()
+    lowered = re.sub(r"^the\s+", '', target.lower()).strip()
+    return _ORDINALS.get(lowered, target)
 
 
 def is_show_notes_intent(text):
@@ -183,29 +212,50 @@ def match_read_note(text):
     match = _READ_NOTE_RE.search(_typo_correct_note_keywords(text))
     if not match:
         return None
-    return _TARGET_PREFIX_RE.sub('', match.group(1) or '').strip(' :-').strip()
+    return _normalize_note_target(_TARGET_PREFIX_RE.sub('', match.group(1) or ''))
 
 
 def match_delete_note(text):
     """None if `text` isn't a 'delete note...' request at all. Otherwise
     DELETE_ALL_NOTES for 'delete all my notes', or the (possibly empty)
     target phrase to search for, e.g. 'delete note about milk' -> 'milk'."""
-    match = _DELETE_NOTE_RE.search(_typo_correct_note_keywords(text))
+    corrected = _typo_correct_note_keywords(text)
+    match = _DELETE_NOTE_RE.search(corrected)
     if not match:
-        return None
+        alternate = _DELETE_NOTE_RE_TARGET_FIRST.search(corrected)
+        return _normalize_note_target(alternate.group(1)) if alternate else None
     if 'all' in (match.group(1) or '').lower():
         return DELETE_ALL_NOTES
     target = _TARGET_PREFIX_RE.sub('', match.group(2) or '')
-    return target.strip(' :-—').strip()
+    return _normalize_note_target(target)
 
 
 def match_edit_note(text):
     """None if `text` isn't an 'edit note ... to ...' request. Otherwise a
     (target, new_content) tuple — either half can be empty if the phrasing
     didn't include one, which the caller should treat as "ask for more"."""
-    match = _EDIT_NOTE_RE.search(_typo_correct_note_keywords(text))
+    corrected = _typo_correct_note_keywords(text)
+    match = _EDIT_NOTE_RE.search(corrected)
     if not match:
-        return None
+        alternate = _EDIT_NOTE_RE_TARGET_FIRST.search(corrected)
+        if not alternate:
+            return None
+        original_content = re.search(r"\b(?:to|with)\b\s+(.+?)\s*$", text or '', re.IGNORECASE)
+        new_content = original_content.group(1) if original_content else (alternate.group(2) or '')
+        return _normalize_note_target(alternate.group(1)), new_content.strip(' :-—').strip()
     target = _TARGET_PREFIX_RE.sub('', match.group(1) or '').strip(' :-—').strip()
-    new_content = _CONTENT_PREFIX_RE.sub('', match.group(2) or '').strip(' :-—').strip()
-    return target, new_content
+    original_content = re.search(r"\b(?:to|with)\b\s+(.+?)\s*$", text or '', re.IGNORECASE)
+    raw_content = original_content.group(1) if original_content else (match.group(2) or '')
+    new_content = _CONTENT_PREFIX_RE.sub('', raw_content).strip(' :-—').strip()
+    return _normalize_note_target(target), new_content
+
+
+def is_contextual_note_edit(text):
+    """Edit wording that can apply to a previously selected database note."""
+    corrected = _typo_correct_note_keywords(text).strip()
+    return bool(re.match(
+        r"^(?:please\s+)?(?:edit|update|change|rename|correct|replace|rewrite|set)\b|"
+        r"^(?:only\s+)?(?:the\s+)?(?:time|date|meeting\s+time)\b",
+        corrected,
+        re.IGNORECASE,
+    ))

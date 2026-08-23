@@ -1,48 +1,68 @@
 """Verified public facts shown on edutrellis.in and /websitecreation.
 
-This context is injected for every model, not learned from chat replies.  Keep
+This context is injected for every model, not learned from chat replies. Keep
 it in sync with the public templates when company copy, prices, or contacts
 change; it is intentionally authoritative so a model cannot invent details.
+Contact details themselves live in myapp/business_info.py (the single
+source of truth) and are interpolated below, not retyped here.
 """
 import re
 
+from myapp import business_info
 
 _BRAND_RE = re.compile(r"\b(edutrellis|edutrellis\.in|websitecreation)\b", re.IGNORECASE)
-_UNAMBIGUOUS_FOLLOWUP_RE = re.compile(
-    r"\b(sales\s*team\s*(?:phone|number|contact)?|your\s+(?:company|services?|"
-    r"packages?|prices?|pricing|phone|number|e-?mail|address|office|instagram|"
-    r"facebook|linkedin|social\s*(?:media|handles?)|founder|ceo|team)|"
-    r"company's\s+(?:phone|number|e-?mail|address|office|social)|"
-    r"website\s+creation\s+(?:price|pricing|package|service))\b",
+
+# Broad on purpose: this is a single-tenant assistant embedded on
+# EduTrellis's own site, so any message shaped like a request for contact,
+# pricing, or company details is implicitly about EduTrellis — there's no
+# other company it could reasonably mean. Over-triggering here just adds
+# harmless supplementary grounding (the model is told elsewhere to use it
+# only where relevant); under-triggering is what let a typo'd or oddly-
+# phrased question like "sales number" or "company address" fall through
+# to the model with no grounding at all, which is how it ended up
+# fabricating a fake US toll-free line and a fake email in the first place
+# (see the KnowledgeEntry that got cleaned up alongside this fix).
+_CONTACT_KEYWORD_RE = re.compile(
+    r"\b(phone|telephone|mobile|whatsapp|what.?s ?app|call(?:ing)?|e-?mail|"
+    r"contact|address|location|office|sales|support|helpline|founder|ceo|"
+    r"owner|instagram|facebook|linkedin|social(?:\s*media|\s*handles?)?|"
+    r"hours|timing|timings|"
+    r"pric(?:e|ing)|cost|package|packages|plan|plans|quote|charges?|fees?)\b",
     re.IGNORECASE,
 )
 
 
 def is_company_query(text):
     text = text or ''
-    return bool(_BRAND_RE.search(text) or _UNAMBIGUOUS_FOLLOWUP_RE.search(text))
+    return bool(_BRAND_RE.search(text) or _CONTACT_KEYWORD_RE.search(text))
 
 
-PUBLIC_SITE_CONTEXT = """VERIFIED EDUTRELLIS PUBLIC WEBSITE DATA (authoritative):
+PUBLIC_SITE_CONTEXT = f"""VERIFIED EDUTRELLIS PUBLIC WEBSITE DATA (authoritative):
 Use only these details for EduTrellis company answers. Never invent a phone
-number, email, address, price, person, statistic, social handle, or URL. If a
-requested detail is absent, say it is not published on the supplied pages.
+number, email, address, price, person, statistic, social handle, or URL. In
+particular, there is exactly ONE phone/WhatsApp number and ONE general
+support email below — never invent a separate "sales line", toll-free
+number, international line, or second email address; if asked for a sales
+number/email specifically, the same contact below IS the right one to give.
+If a requested detail is genuinely absent from this context, say so plainly
+and point to edutrellis.in or {business_info.EMAIL_SUPPORT} — never make up
+a plausible-sounding placeholder instead.
 
 Company: EduTrellis is a website-development and digital-growth company in
 Lucknow, Uttar Pradesh, India. Founded in 2020 by Vijay Tiwari, Founder & CEO.
 Rudra Narayan Tiwari leads the Sales and Tech teams and built EduTrellis AI;
-he is not the founder. Public founder email: ceo@edutrellis.in. Founder
-LinkedIn: https://www.linkedin.com/in/vijaytiwariii/
+he is not the founder. Public founder email: {business_info.EMAIL_CEO}.
+Founder LinkedIn: {business_info.LINKEDIN_FOUNDER_URL}
 
-Official contacts: support@edutrellis.in; call/WhatsApp +91 96959 53183.
-Office: P-109, Prembagh, Shahpur, Chinhat, Lucknow, Uttar Pradesh 226028.
-Public hours on /websitecreation: Monday-Saturday 9 AM-8 PM; Sunday 10 AM-6 PM.
-Instagram: https://www.instagram.com/edutrellis (@edutrellis)
-LinkedIn: https://www.linkedin.com/company/edutrellis
-Facebook: https://www.facebook.com/profile.php?id=61590850943948
+Official contacts: {business_info.EMAIL_SUPPORT}; call/WhatsApp {business_info.PHONE_DISPLAY}.
+Office: {business_info.ADDRESS}.
+Public hours on /websitecreation: {business_info.HOURS}.
+Instagram: {business_info.INSTAGRAM_URL} (@edutrellis)
+LinkedIn: {business_info.LINKEDIN_COMPANY_URL}
+Facebook: {business_info.FACEBOOK_URL}
 
-Official pages: https://www.edutrellis.in/ and
-https://www.edutrellis.in/websitecreation/. The website-creation page offers a
+Official pages: {business_info.WEBSITE} and
+{business_info.WEBSITE_CREATION_URL}. The website-creation page offers a
 free quote/consultation. Do not claim that prices are unpublished: the main
 public page displays these prices:
 - Complete Website Management: ₹2,999/month; includes end-to-end management,

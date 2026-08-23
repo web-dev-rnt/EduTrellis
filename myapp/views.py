@@ -2065,6 +2065,18 @@ def _ai_owner_filter(request):
     return Q(user__isnull=True, session_key=session_key)
 
 
+def _ai_notes_snapshot(request):
+    """Single database snapshot used by page boot, API responses and chat."""
+    notes = list(
+        AINote.objects.filter(_ai_owner_filter(request))
+        .values('id', 'heading', 'content', 'created_at')
+        .order_by('-created_at', '-pk')[:200]
+    )
+    for note in notes:
+        note['created_at'] = timezone.localtime(note['created_at']).isoformat()
+    return notes
+
+
 def ai_manifest(request):
     # Same brand red as the rest of edutrellis.in's favicon, but as real
     # 192x192/512x512 PNGs rather than the site's actual favicon.ico (which
@@ -2101,12 +2113,7 @@ def ai_page(request):
     for c in conversations:
         c['updated_at'] = timezone.localtime(c['updated_at']).isoformat()
 
-    notes = list(
-        AINote.objects.filter(_ai_owner_filter(request))
-        .values('id', 'heading', 'content', 'created_at').order_by('-created_at')[:200]
-    )
-    for n in notes:
-        n['created_at'] = timezone.localtime(n['created_at']).isoformat()
+    notes = _ai_notes_snapshot(request)
 
     # Browser storage can be unavailable or cleared. Remember the last chat
     # the server actually opened/sent to as a safe refresh/login fallback.
@@ -2230,6 +2237,53 @@ def _ai_note_heading(text):
     return (first_line[:60] + '…') if len(first_line) > 60 else first_line
 
 
+AI_SELECTED_NOTES_SESSION_KEY = 'ai_selected_note_ids'
+AI_PENDING_NOTE_EDITS_SESSION_KEY = 'ai_pending_note_edits'
+
+
+def _ai_safe_note_text(text):
+    """Fix only a small set of unambiguous spelling mistakes."""
+    corrections = {
+        'teh': 'the', 'tomorow': 'tomorrow', 'tommorow': 'tomorrow',
+        'meting': 'meeting', 'remeber': 'remember',
+    }
+    return re.sub(
+        r"\b(?:teh|tomorow|tommorow|meting|remeber)\b",
+        lambda match: corrections[match.group(0).lower()],
+        (text or '').strip(), flags=re.IGNORECASE,
+    )
+
+
+def _ai_set_selected_note(request, conversation, note_id):
+    selected = dict(request.session.get(AI_SELECTED_NOTES_SESSION_KEY, {}))
+    selected[str(conversation.pk)] = int(note_id)
+    request.session[AI_SELECTED_NOTES_SESSION_KEY] = selected
+
+
+def _ai_get_selected_note(request, conversation):
+    selected = request.session.get(AI_SELECTED_NOTES_SESSION_KEY, {})
+    try:
+        note_id = int(selected.get(str(conversation.pk)))
+    except (TypeError, ValueError, AttributeError):
+        return None
+    return AINote.objects.filter(_ai_owner_filter(request), pk=note_id).first()
+
+
+def _ai_set_pending_note_edit(request, conversation, payload=None):
+    pending = dict(request.session.get(AI_PENDING_NOTE_EDITS_SESSION_KEY, {}))
+    key = str(conversation.pk)
+    if payload:
+        pending[key] = payload
+    else:
+        pending.pop(key, None)
+    request.session[AI_PENDING_NOTE_EDITS_SESSION_KEY] = pending
+
+
+def _ai_get_pending_note_edit(request, conversation):
+    pending = request.session.get(AI_PENDING_NOTE_EDITS_SESSION_KEY, {})
+    return pending.get(str(conversation.pk)) if isinstance(pending, dict) else None
+
+
 def _ai_note_action_reply(request, conversation, confirmation, extra_headers=None):
     """Shared tail for every My Notes action (save/show/delete/edit) —
     saves `confirmation` as the assistant's turn and returns it on the same
@@ -2275,12 +2329,9 @@ def _ai_save_note_response(request, conversation, message):
     back at yet.
     """
     remainder = request_router.strip_note_intent(message).strip(' :-—')
-    if len(remainder) > 3:
-        note_content = remainder
-    else:
-        last_reply = conversation.messages.filter(role=AIMessage.ROLE_ASSISTANT) \
-            .order_by('-created_at').values_list('content', flat=True).first()
-        note_content = (last_reply or message).strip()
+    if not remainder:
+        return _ai_note_action_reply(request, conversation, 'What would you like the note to say?')
+    note_content = _ai_safe_note_text(remainder)
     heading = _ai_note_heading(note_content)
 
     note = AINote.objects.create(
@@ -2289,12 +2340,13 @@ def _ai_save_note_response(request, conversation, message):
         conversation=conversation, heading=heading, content=note_content,
     )
 
-    saved_at = timezone.localtime(note.created_at)
-    confirmation = (
-        f"📝 Saved to your notes — **{heading or 'Untitled note'}**\n\n"
-        f"_{saved_at.strftime('%b %d, %Y at %I:%M %p')}_\n\n"
-        "You can find it anytime in My Notes from the sidebar."
-    )
+    note = AINote.objects.filter(_ai_owner_filter(request), pk=note.pk).first()
+    if not note:
+        return _ai_note_action_reply(request, conversation, 'I couldn\'t save that note. Please try again.')
+    _ai_notes_snapshot(request)
+    _ai_set_selected_note(request, conversation, note.pk)
+
+    confirmation = "Saved to your notes. The saved note is:\n\n" + _ai_note_final_text(note)
     return _ai_note_action_reply(request, conversation, confirmation, {
         'X-Notes-Changed': '1', 'X-Note-Id': str(note.id),
     })
@@ -2304,19 +2356,24 @@ def _ai_show_notes_response(request, conversation):
     """'Show my notes' / 'what notes do I have' (see
     request_router.is_show_notes_intent) — lists the user's saved notes
     right in the chat, newest first."""
-    notes = list(AINote.objects.filter(_ai_owner_filter(request)).order_by('-created_at', '-pk')[:20])
+    notes = _ai_notes_snapshot(request)
     if not notes:
-        confirmation = 'You don\'t have any saved notes yet — say something like "note it down" after a reply to save one.'
+        confirmation = "You don’t have any saved notes."
     else:
         lines = [
-            f"{index}. **{n.heading or 'Untitled note'}** _({timezone.localtime(n.created_at).strftime('%b %d, %Y at %I:%M %p')})_"
-            for index, n in enumerate(notes, 1)
+            (f"{index}. **{note['content']}**" if (note['heading'] or '').strip() == note['content'].strip()
+             else f"{index}. **{note['heading'] or 'Untitled note'}**\n{note['content']}")
+            for index, note in enumerate(notes, 1)
         ]
-        confirmation = "📒 Here are your saved notes:\n\n" + '\n'.join(lines)
+        confirmation = "Here are your saved notes:\n\n" + '\n\n'.join(lines)
     return _ai_note_action_reply(request, conversation, confirmation)
 
 
 def _ai_matching_notes(request, target):
+    database_id = re.fullmatch(r"id\s*#?\s*(\d+)", (target or '').strip(), re.IGNORECASE)
+    if database_id:
+        note = AINote.objects.filter(_ai_owner_filter(request), pk=int(database_id.group(1))).first()
+        return [note] if note else []
     ordinal = re.fullmatch(r"(?:number\s*|#\s*)?(\d+)(?:st|nd|rd|th)?", (target or '').strip(), re.IGNORECASE)
     if ordinal:
         position = int(ordinal.group(1))
@@ -2340,6 +2397,7 @@ def _ai_read_note_response(request, conversation, target):
         listing = '\n'.join(f"- {n.heading or 'Untitled note'}" for n in matches)
         return _ai_note_action_reply(request, conversation, f"I found more than one matching note:\n\n{listing}\n\nUse its number from \"show my notes\" or a more specific title.")
     note = matches[0]
+    _ai_set_selected_note(request, conversation, note.pk)
     created = timezone.localtime(note.created_at).strftime('%b %d, %Y at %I:%M %p')
     return _ai_note_action_reply(
         request, conversation,
@@ -2355,7 +2413,9 @@ def _ai_delete_note_response(request, conversation, target):
         owner_notes = AINote.objects.filter(_ai_owner_filter(request))
         count = owner_notes.count()
         owner_notes.delete()
-        confirmation = f"🗑️ Deleted all {count} of your saved notes." if count else "You don't have any saved notes to delete."
+        if _ai_notes_snapshot(request):
+            return _ai_note_action_reply(request, conversation, 'I couldn\'t delete all notes. Please try again.')
+        confirmation = f"Deleted all {count} of your saved notes." if count else "You don’t have any saved notes."
         return _ai_note_action_reply(request, conversation, confirmation, {'X-Notes-Changed': '1'})
 
     if not target:
@@ -2373,41 +2433,168 @@ def _ai_delete_note_response(request, conversation, target):
 
     note = matches[0]
     heading = note.heading or 'Untitled note'
+    note_id = note.pk
     note.delete()
-    confirmation = f"🗑️ Deleted your note — **{heading}**."
+    latest_notes = _ai_notes_snapshot(request)
+    if any(item['id'] == note_id for item in latest_notes):
+        return _ai_note_action_reply(request, conversation, 'I couldn\'t delete that note. Please try again.')
+    confirmation = f"Deleted your note — **{heading}**."
     return _ai_note_action_reply(request, conversation, confirmation, {'X-Notes-Changed': '1'})
 
 
-def _ai_edit_note_response(request, conversation, target, new_content):
-    """'Edit/update/change note about X to Y' (see
-    request_router.match_edit_note)."""
+_AI_NOTE_TIME_RE = re.compile(
+    r"\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)\b|"
+    r"\b(?:[01]?\d|2[0-3]):[0-5]\d\b",
+    re.IGNORECASE,
+)
+
+
+def _ai_note_final_text(note):
+    if (note.heading or '').strip() == note.content.strip():
+        return f"**{note.content}**"
+    return f"**{note.heading or 'Untitled note'}**\n\n{note.content}"
+
+
+def _ai_commit_note_update(request, conversation, note, *, content=None, heading=None):
+    update_fields = []
+    if content is not None:
+        note.content = _ai_safe_note_text(content)
+        note.heading = _ai_note_heading(note.content)
+        update_fields.extend(['content', 'heading'])
+    if heading is not None:
+        note.heading = _ai_safe_note_text(heading)[:120]
+        if 'heading' not in update_fields:
+            update_fields.append('heading')
+    note.save(update_fields=update_fields)
+
+    saved = AINote.objects.filter(_ai_owner_filter(request), pk=note.pk).first()
+    expected_content = note.content if content is not None else saved.content if saved else None
+    expected_heading = note.heading if heading is not None else saved.heading if saved else None
+    if not saved or saved.content != expected_content or saved.heading != expected_heading:
+        return _ai_note_action_reply(request, conversation, 'I couldn\'t update that note. Please try again.')
+
+    _ai_notes_snapshot(request)
+    _ai_set_selected_note(request, conversation, saved.pk)
+    _ai_set_pending_note_edit(request, conversation)
+    confirmation = "Updated your note. The saved note is now:\n\n" + _ai_note_final_text(saved)
+    return _ai_note_action_reply(request, conversation, confirmation, {
+        'X-Notes-Changed': '1', 'X-Note-Id': str(saved.pk),
+    })
+
+
+def _ai_replace_note_time(request, conversation, note, new_time, old_time=None):
+    if old_time:
+        match = re.search(re.escape(old_time), note.content, re.IGNORECASE)
+        if not match:
+            return _ai_note_action_reply(request, conversation, f'I couldn\'t find "{old_time}" in that note.')
+        updated = note.content[:match.start()] + new_time + note.content[match.end():]
+    else:
+        times = list(_AI_NOTE_TIME_RE.finditer(note.content))
+        if not times:
+            return _ai_note_action_reply(request, conversation, 'That note does not contain a time to update.')
+        if len(times) > 1:
+            choices = ', '.join(match.group(0) for match in times)
+            return _ai_note_action_reply(request, conversation, f"That note contains multiple times ({choices}). Which one should I change?")
+        match = times[0]
+        updated = note.content[:match.start()] + new_time + note.content[match.end():]
+    return _ai_commit_note_update(request, conversation, note, content=updated)
+
+
+def _ai_apply_note_instruction(request, conversation, note, instruction, original_message):
+    instruction = (instruction or '').strip(' :-—')
+    original_message = original_message or instruction
+    _ai_set_selected_note(request, conversation, note.pk)
+
+    if not instruction:
+        return _ai_note_action_reply(
+            request, conversation,
+            _ai_note_final_text(note) + "\n\nWhat would you like to change in this note?",
+            {'X-Note-Id': str(note.pk)},
+        )
+
+    if re.search(r"\brename\b", original_message, re.IGNORECASE):
+        return _ai_commit_note_update(request, conversation, note, heading=instruction)
+
+    time_change = re.search(
+        r"(?:(?:update|change|correct|set)\s+)?"
+        r"(?:(?:only\s+)?(?:the\s+)?(?:meeting\s+)?time|(?:this|the)\s+note(?:'s)?\s+(?:meeting\s+)?time)"
+        r"(?:\s+from\s+(?P<old>(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)))?"
+        r"\s+to\s+(?P<new>(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm))\b",
+        original_message, re.IGNORECASE,
+    )
+    if time_change:
+        return _ai_replace_note_time(
+            request, conversation, note,
+            time_change.group('new').strip(),
+            (time_change.group('old') or '').strip() or None,
+        )
+
+    exact_change = re.search(
+        r"(?:change|replace|correct)\s+(.+?)\s+(?:to|with)\s+(.+?)\s*$",
+        original_message, re.IGNORECASE,
+    )
+    if exact_change and exact_change.group(1).lower().strip() not in ('it', 'this', 'this note', 'the note'):
+        old, new = exact_change.group(1).strip(), _ai_safe_note_text(exact_change.group(2))
+        found = re.search(re.escape(old), note.content, re.IGNORECASE)
+        if found:
+            updated = note.content[:found.start()] + new + note.content[found.end():]
+            return _ai_commit_note_update(request, conversation, note, content=updated)
+
+    explicit_full = bool(re.search(r"\b(?:replace|rewrite|full note|entire note)\b", original_message, re.IGNORECASE))
+    if explicit_full:
+        return _ai_commit_note_update(request, conversation, note, content=instruction)
+
+    possible_time = re.fullmatch(r"(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)", instruction, re.IGNORECASE)
+    field = 'time' if possible_time and _AI_NOTE_TIME_RE.search(note.content) else 'part'
+    _ai_set_pending_note_edit(request, conversation, {
+        'note_id': note.pk, 'new_content': instruction, 'field': field,
+    })
+    if field == 'time':
+        question = f"Should I update only the time to {instruction}, or replace the full note?"
+    else:
+        question = "Should I update only part of this note, or replace the full note?"
+    return _ai_note_action_reply(request, conversation, question, {'X-Note-Id': str(note.pk)})
+
+
+def _ai_edit_note_response(request, conversation, target, new_content, original_message):
     if not target:
-        confirmation = 'Tell me which note to edit and the new text, e.g. "edit note about milk to buy bread and eggs".'
-        return _ai_note_action_reply(request, conversation, confirmation)
+        return _ai_note_action_reply(request, conversation, 'Which note would you like to edit? Use its sidebar number or database ID.')
 
     matches = _ai_matching_notes(request, target)
     if not matches:
-        confirmation = f'I couldn\'t find a note matching "{target}".'
-        return _ai_note_action_reply(request, conversation, confirmation)
+        return _ai_note_action_reply(request, conversation, f'I couldn\'t find a note matching "{target}".')
     if len(matches) > 1:
         listing = '\n'.join(f"- {n.heading or 'Untitled note'}" for n in matches)
-        confirmation = f"I found more than one note matching that:\n\n{listing}\n\nBe more specific about which one to edit."
-        return _ai_note_action_reply(request, conversation, confirmation)
+        return _ai_note_action_reply(request, conversation, f"I found more than one matching note:\n\n{listing}\n\nWhich note do you mean?")
 
     note = matches[0]
-    if not new_content:
-        confirmation = (
-            f"**{note.heading or 'Untitled note'}**\n\n{note.content}\n\n"
-            f'To replace it, say: "edit note {target} to [your new text]".'
-        )
-        return _ai_note_action_reply(request, conversation, confirmation, {'X-Note-Id': str(note.id)})
-    note.content = new_content
-    note.heading = _ai_note_heading(new_content)
-    note.save(update_fields=['content', 'heading'])
-    confirmation = f"✏️ Updated your note — **{note.heading or 'Untitled note'}**."
-    return _ai_note_action_reply(request, conversation, confirmation, {
-        'X-Notes-Changed': '1', 'X-Note-Id': str(note.id),
-    })
+    return _ai_apply_note_instruction(request, conversation, note, new_content, original_message)
+
+
+def _ai_contextual_note_edit_response(request, conversation, message):
+    note = _ai_get_selected_note(request, conversation)
+    if not note:
+        return None
+    ambiguous = re.search(r"(?:update|change|set)\s+(?:it|this note|the note)\s+to\s+(.+?)\s*$", message, re.IGNORECASE)
+    instruction = ambiguous.group(1).strip() if ambiguous else message
+    return _ai_apply_note_instruction(request, conversation, note, instruction, message)
+
+
+def _ai_pending_note_edit_response(request, conversation, message):
+    pending = _ai_get_pending_note_edit(request, conversation)
+    if not pending:
+        return None
+    note = AINote.objects.filter(_ai_owner_filter(request), pk=pending.get('note_id')).first()
+    if not note:
+        _ai_set_pending_note_edit(request, conversation)
+        return _ai_note_action_reply(request, conversation, 'That note no longer exists.')
+    if re.fullmatch(r"\s*(?:(?:only|just)\s+(?:the\s+)?time|update\s+only\s+(?:the\s+)?time)\s*", message, re.IGNORECASE):
+        if pending.get('field') != 'time':
+            return _ai_note_action_reply(request, conversation, 'What should the new time be?')
+        return _ai_replace_note_time(request, conversation, note, pending['new_content'])
+    if re.search(r"\b(?:replace|rewrite)\s+(?:the\s+)?(?:full|entire|whole)?\s*note\b|\bfull replacement\b", message, re.IGNORECASE):
+        return _ai_commit_note_update(request, conversation, note, content=pending['new_content'])
+    return None
 
 
 def ai_chat_send(request):
@@ -2573,17 +2760,24 @@ def ai_chat_send(request):
     # document is attached so that kind of turn can never get mistaken for
     # note-taking.
     if message and not image_data and not document_text:
+        pending_response = _ai_pending_note_edit_response(request, conversation, message)
+        if pending_response is not None:
+            return pending_response
+        if request_router.is_show_notes_intent(message):
+            return _ai_show_notes_response(request, conversation)
         read_target = request_router.match_read_note(message)
         if read_target is not None:
             return _ai_read_note_response(request, conversation, read_target)
-        if request_router.is_show_notes_intent(message):
-            return _ai_show_notes_response(request, conversation)
         delete_target = request_router.match_delete_note(message)
         if delete_target is not None:
             return _ai_delete_note_response(request, conversation, delete_target)
         edit_match = request_router.match_edit_note(message)
         if edit_match is not None:
-            return _ai_edit_note_response(request, conversation, edit_match[0], edit_match[1])
+            return _ai_edit_note_response(request, conversation, edit_match[0], edit_match[1], message)
+        if request_router.is_contextual_note_edit(message):
+            contextual_response = _ai_contextual_note_edit_response(request, conversation, message)
+            if contextual_response is not None:
+                return contextual_response
         if request_router.is_note_intent(message):
             return _ai_save_note_response(request, conversation, message)
 
@@ -3036,13 +3230,9 @@ def ai_conversation_delete(request, conversation_id):
 
 
 def ai_notes_list(request):
-    notes = list(
-        AINote.objects.filter(_ai_owner_filter(request))
-        .values('id', 'heading', 'content', 'created_at').order_by('-created_at')[:200]
-    )
-    for n in notes:
-        n['created_at'] = timezone.localtime(n['created_at']).isoformat()
-    return JsonResponse({'status': 'ok', 'notes': notes})
+    response = JsonResponse({'status': 'ok', 'notes': _ai_notes_snapshot(request)})
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 def ai_note_delete(request, note_id):
@@ -3052,7 +3242,11 @@ def ai_note_delete(request, note_id):
     if not note:
         return JsonResponse({'status': 'error', 'detail': 'Note not found.'}, status=404)
     note.delete()
-    return JsonResponse({'status': 'ok'})
+    if any(item['id'] == note_id for item in _ai_notes_snapshot(request)):
+        return JsonResponse({'status': 'error', 'detail': 'Could not delete note.'}, status=500)
+    response = JsonResponse({'status': 'ok', 'notes': _ai_notes_snapshot(request)})
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 AI_REPORT_MAX_EXPLANATION_CHARS = 2000

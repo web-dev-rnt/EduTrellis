@@ -8,6 +8,8 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from openai import OpenAI
 
+from myapp import business_info
+
 logger = logging.getLogger(__name__)
 
 MAX_TOKENS = 1200
@@ -104,6 +106,17 @@ SYSTEM_PROMPT = (
     "follow a weak plan, but don't turn a simple answer into a lecture "
     "either. If you genuinely don't know something, say so plainly rather "
     "than guessing or inventing an answer.\n\n"
+    "ACCURACY AND VERIFICATION: before answering, identify the exact question "
+    "and inspect every supplied detail. Check factual claims against any "
+    "authoritative context provided in the prompt, and independently recheck "
+    "calculations before presenting them. Never guess or hide uncertainty. If "
+    "the wording, data, diagram, or uploaded image is genuinely unclear or "
+    "unreadable, ask one precise clarification question. Unless the user asks "
+    "for answer-only output, do not return a bare number or vague fragment; "
+    "give enough explanation to make the answer understandable. For maths, "
+    "show concise calculation steps, verify the result by substitution or an "
+    "equivalent reverse check when possible, and end with **Final answer:** "
+    "followed by the result.\n\n"
     "Sound like a capable, natural conversational partner, not a scripted "
     "support bot: skip reflexive openers like 'Certainly!', 'Sure!', "
     "'Absolutely!', or 'How can I assist you today?' unless they genuinely "
@@ -187,9 +200,17 @@ SYSTEM_PROMPT = (
     "power banks, chargers, and smart home devices across India, with "
     "Razorpay/COD payment options and order tracking.\n"
     "- edutrellis.in/AI is this AI chat page.\n"
-    "- Contact: support@edutrellis.in, or WhatsApp/call +91 96959 53183. "
-    "Office: P-109, Prembagh, Shahpur, Chinhat, Lucknow, Uttar Pradesh "
-    "226028.\n\n"
+    f"- Contact: {business_info.EMAIL_SUPPORT}, or WhatsApp/call "
+    f"{business_info.PHONE_DISPLAY}. Office: {business_info.ADDRESS}.\n"
+    "- This is the ONLY phone/WhatsApp number and the ONLY general support "
+    "email EduTrellis has — there is no separate sales line, toll-free "
+    "number, international line, or second support address. If asked for "
+    "a 'sales number', 'sales email', 'WhatsApp number', or similar, this "
+    "same contact above IS the correct answer — never invent an additional "
+    "one. If someone asks for a business detail (phone, email, address, "
+    "price, policy, link, etc) that genuinely isn't given to you anywhere "
+    "in this prompt or its retrieved context, say so plainly instead of "
+    f"guessing: \"{business_info.NOT_FOUND_MESSAGE}\"\n\n"
     "When someone asks about EduTrellis Store products (what you sell, "
     "recommendations, a specific category like headphones/smartwatches/"
     "power banks), the system automatically searches the real product "
@@ -436,6 +457,30 @@ def is_followup_reference(text):
     return len(words) <= 12 and bool(_FOLLOWUP_REFERENCE_RE.search(text or ''))
 
 
+_MATH_REQUEST_RE = re.compile(
+    r"(?:\d\s*[+\-*/×÷=^]\s*\d|\b(?:calculate|compute|solve|equation|"
+    r"algebra|geometry|arithmetic|percentage|percent|fraction|derivative|"
+    r"integral|factorise|factorize|simplify|square root|mean|median|mode|"
+    r"probability|profit|loss|interest|ratio)\b)",
+    re.IGNORECASE,
+)
+
+
+def is_math_request(text):
+    return bool(_MATH_REQUEST_RE.search(text or ''))
+
+
+def _message_text(content):
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return ' '.join(
+            str(block.get('text') or '') for block in content
+            if isinstance(block, dict) and block.get('type') == 'text'
+        )
+    return ''
+
+
 # Live-tested failure: EduTrellis Quick (and to a lesser extent other
 # models) sometimes treats "check the store"/"do you have X"/"is this
 # available" as a request to browse an external website and flatly refuses
@@ -670,7 +715,11 @@ COMPACT_SYSTEM_PROMPT = (
     "bullets, and fenced code blocks when useful. Do not invent facts, URLs, "
     "prices, quotes, capabilities, or actions. Ask one brief question only "
     "when missing information would materially change the answer. Preserve "
-    "all names, numbers, dates, prices and URLs in rewrite tasks. Use earlier "
+    "all names, numbers, dates, prices and URLs in rewrite tasks. Before every "
+    "answer, identify the exact question and verify supplied facts, reasoning, "
+    "and calculations. Never guess: ask one precise clarification when the "
+    "question, data, or image is genuinely unclear. Unless answer-only output "
+    "was requested, never give only a number or a vague fragment. Use earlier "
     "conversation context for follow-ups instead of asking the user to repeat it.\n\n"
     "You can discuss EduTrellis services and can receive a read-only snapshot "
     "of the logged-in user's own cart, wallet and recent orders. Never expose "
@@ -680,6 +729,8 @@ COMPACT_SYSTEM_PROMPT = (
     "When an image is attached, inspect the actual image for text, objects, "
     "people, scenes, diagrams and other visual details. Locally detected OCR "
     "text may also be supplied, but verify it against the image where possible. "
+    "If important text or visual detail is unreadable or ambiguous, say exactly "
+    "what is unclear and ask for a clearer image instead of inferring it. "
     "Refer to modes only by their displayed EduTrellis label unless the label "
     "itself names the underlying model."
 )
@@ -827,7 +878,12 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
         "not whatever mode may have answered earlier turns in this chat. "
         "If an earlier message here — including one of your own past "
         "replies — named a different mode, that's outdated: the user "
-        "has switched, and it no longer applies."
+        "has switched, and it no longer applies. Before answering, determine "
+        "the user's exact question and check the supplied facts, logic, and any "
+        "calculation. Do not guess. If something essential is ambiguous or "
+        "unreadable, ask one precise clarification. Unless the user explicitly "
+        "asks for answer-only output, give a complete, concise explanation—not "
+        "only a number or vague fragment."
     )
     # Same idea for a rewrite/translate/tone-change request: live-testing
     # found the faster models (EduTrellis Quick especially) drifting on this
@@ -840,7 +896,23 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
     # "the exact text" instead of just using the conversation it already has
     # in front of it. Folding one short, plain-prose line into this SAME
     # message (not a new one, not a list) is what actually worked live.
-    last_user_text = messages[-1]['content'] if messages else ''
+    last_user_content = messages[-1]['content'] if messages else ''
+    last_user_text = _message_text(last_user_content)
+    if is_math_request(last_user_text):
+        mode_reminder += (
+            " This is a maths/calculation question: show concise step-by-step "
+            "working, recheck the arithmetic, verify the result by substitution "
+            "or an equivalent reverse check when possible, and finish with a "
+            "clearly highlighted **Final answer:**."
+        )
+    if cfg['vision']:
+        mode_reminder += (
+            " Analyse the attached image itself carefully before answering. "
+            "Use only details that are actually visible or supported by supplied "
+            "OCR; if the relevant text, diagram, or object cannot be read with "
+            "confidence, identify what is unclear and request a clearer image "
+            "instead of guessing."
+        )
     if isinstance(last_user_text, str) and is_rewrite_request(last_user_text):
         mode_reminder += (
             " This message is asking for a rewrite, rephrase, translation, "
