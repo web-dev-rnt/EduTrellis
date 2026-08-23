@@ -37,7 +37,7 @@ from myapp.models import (
     ContactLead, StoreProfile, Cart, CartItem, Category, Order, OrderItem,
     Product, ProductImage, ProductColor, AboutUsContent, PolicyPage, PaymentSettings, Payment,
     DropboxSettings, Review, PhoneVerification, PWASettings, FeeSettings,
-    AIConversation, AIMessage, AIBlock, GitHubConnection, YouTubeDownloadJob, AI_SUBSCRIPTION_PRODUCT_SLUG,
+    AIConversation, AIMessage, AIBlock, AINote, AIReport, GitHubConnection, YouTubeDownloadJob, AI_SUBSCRIPTION_PRODUCT_SLUG,
 )
 from myapp import dropbox_backup
 from myapp import ai_chat
@@ -83,12 +83,44 @@ def product_detail(request, slug):
     the product detail view for `slug` on load. This gives every product a
     real, shareable, bookmarkable URL without duplicating the header, cart
     drawer, auth modals and footer into a second template."""
-    product = get_object_or_404(Product, slug=slug, is_active=True)
+    product = get_object_or_404(Product.objects.prefetch_related('reviews'), slug=slug, is_active=True)
     context = _estore_context(request)
     context['initial_product_slug'] = product.slug
     context['meta_title'] = f"{product.name} — EduTrellis Store"
     context['meta_description'] = product.short_description
     context['meta_image'] = product.image.url if product.image else ''
+    rating, review_count = product.review_stats
+    product_schema = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        'name': product.name,
+        'description': product.short_description,
+        'sku': product.slug,
+        'brand': {'@type': 'Brand', 'name': product.brand},
+        'url': f'https://www.edutrellis.in/store/product/{product.slug}/',
+        'offers': {
+            '@type': 'Offer',
+            'priceCurrency': 'INR',
+            'price': str(product.price),
+            'availability': 'https://schema.org/InStock',
+            'url': f'https://www.edutrellis.in/store/product/{product.slug}/',
+        },
+    }
+    if product.image:
+        product_schema['image'] = f'https://www.edutrellis.in{product.image.url}'
+    if review_count:
+        product_schema['aggregateRating'] = {
+            '@type': 'AggregateRating',
+            'ratingValue': rating,
+            'reviewCount': review_count,
+        }
+    # Product content is admin-managed. Escape HTML-significant characters
+    # before placing JSON inside a script element so even unusual text stays
+    # data rather than becoming markup.
+    context['product_schema_json'] = (
+        json.dumps(product_schema, ensure_ascii=False)
+        .replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+    )
     return render(request, "estore.html", context)
 
 
@@ -167,7 +199,10 @@ def pwa_service_worker(request):
 
 
 def _estore_context(request):
-    cart = _get_or_create_cart(request)
+    # A page view does not need to create a session and database cart. Read
+    # an existing cart when there is one; the first Add action still creates
+    # it through _get_or_create_cart exactly as before.
+    cart = _get_cart(request)
     payment_settings = PaymentSettings.get_solo()
     pwa_settings = PWASettings.get_solo()
     fee_settings = FeeSettings.get_solo()
@@ -337,6 +372,18 @@ def _get_or_create_cart(request):
     return cart
 
 
+def _get_cart(request):
+    """Return an existing cart without creating session/database rows."""
+    if request.user.is_authenticated:
+        return Cart.objects.filter(user=request.user).prefetch_related('items').first()
+    session_key = request.session.session_key
+    if not session_key:
+        return None
+    return Cart.objects.filter(
+        session_key=session_key, user__isnull=True,
+    ).prefetch_related('items').first()
+
+
 def _merge_session_cart_into_user(user, session_key):
     """Folds an anonymous cart into the user's cart using the session key
     captured *before* login() — login() rotates the session key, so looking
@@ -370,6 +417,8 @@ def _merge_session_ai_chats_into_user(user, session_key):
 
 
 def _cart_payload(cart):
+    if cart is None:
+        return {'items': [], 'count': 0, 'subtotal': 0.0}
     items = list(cart.items.all())
     subtotal = sum((i.subtotal for i in items), Decimal('0'))
     return {
@@ -1127,7 +1176,7 @@ def custom_404(request, exception=None):
         try:
             resolve(path + '/', urlconf='myapp.urls')
             query = f'?{request.META["QUERY_STRING"]}' if request.META.get('QUERY_STRING') else ''
-            return redirect(path + '/' + query)
+            return redirect(path + '/' + query, permanent=True)
         except Resolver404:
             pass
     return render(request, '404.html', status=404)
@@ -2010,6 +2059,13 @@ def ai_page(request):
     for c in conversations:
         c['updated_at'] = timezone.localtime(c['updated_at']).isoformat()
 
+    notes = list(
+        AINote.objects.filter(_ai_owner_filter(request))
+        .values('id', 'heading', 'content', 'created_at').order_by('-created_at')[:200]
+    )
+    for n in notes:
+        n['created_at'] = timezone.localtime(n['created_at']).isoformat()
+
     # Browser storage can be unavailable or cleared. Remember the last chat
     # the server actually opened/sent to as a safe refresh/login fallback.
     # Always validate it against this request's owner before exposing it.
@@ -2040,6 +2096,7 @@ def ai_page(request):
         'ai_authenticated': request.user.is_authenticated,
         'ai_user': _user_payload(request.user) if request.user.is_authenticated else None,
         'ai_conversations': conversations,
+        'ai_notes': notes,
         'ai_resume_conversation_id': resume_conversation_id,
         'ai_guest_limit': AI_GUEST_MESSAGE_LIMIT,
         'ai_guest_used': 0 if request.user.is_authenticated else min(
@@ -2121,6 +2178,76 @@ def _ai_profile_gate(user, ip=None):
             'purchase_url': _ai_purchase_url(),
         }
     return None
+
+
+def _ai_note_heading(text):
+    """First line of the noted text, trimmed to a short heading — same idea
+    as AIConversation's title-from-first-message, just capped shorter since
+    this is meant to read like a Google Keep card title."""
+    first_line = text.strip().splitlines()[0].strip() if text.strip() else ''
+    return (first_line[:60] + '…') if len(first_line) > 60 else first_line
+
+
+def _ai_save_note_response(request, conversation, message):
+    """Short-circuits ai_chat_send when the user's message is a 'take this
+    note' / 'note it down' / 'save details...' request (see
+    request_router.is_note_intent) — no AI model call, no free-message quota
+    spent, just a saved AINote plus a small confirmation reply, kept on the
+    same StreamingHttpResponse contract as a normal reply so the frontend's
+    existing send()/pump() handling needs no special-casing beyond reading
+    the extra X-Note-* headers.
+
+    Notes whatever extra text came with the trigger phrase itself ('note
+    down: buy milk' -> 'buy milk') when there is any; otherwise falls back
+    to the assistant's last reply in this conversation, since that's what a
+    bare 'note it down' naturally refers to — and to the user's own message
+    as a last resort, for a brand new conversation with nothing to look
+    back at yet.
+    """
+    remainder = request_router.strip_note_intent(message).strip(' :-—')
+    if len(remainder) > 3:
+        note_content = remainder
+    else:
+        last_reply = conversation.messages.filter(role=AIMessage.ROLE_ASSISTANT) \
+            .order_by('-created_at').values_list('content', flat=True).first()
+        note_content = (last_reply or message).strip()
+    heading = _ai_note_heading(note_content)
+
+    note = AINote.objects.create(
+        user=request.user if request.user.is_authenticated else None,
+        session_key='' if request.user.is_authenticated else (request.session.session_key or ''),
+        conversation=conversation, heading=heading, content=note_content,
+    )
+
+    saved_at = timezone.localtime(note.created_at)
+    confirmation = (
+        f"📝 Saved to your notes — **{heading or 'Untitled note'}**\n\n"
+        f"_{saved_at.strftime('%b %d, %Y at %I:%M %p')}_\n\n"
+        "You can find it anytime in My Notes from the sidebar."
+    )
+    AIMessage.objects.create(
+        conversation=conversation, role=AIMessage.ROLE_ASSISTANT,
+        content=confirmation, model_key='note',
+    )
+    conversation.updated_at = timezone.now()
+    conversation.save(update_fields=['updated_at'])
+
+    def event_stream():
+        yield confirmation
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/plain; charset=utf-8')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    response['X-Conversation-Id'] = str(conversation.id)
+    response['X-Model-Key'] = 'note'
+    response['X-Request-Category'] = 'note'
+    response['X-Sumudrika'] = ''
+    response['X-Jagu'] = ''
+    response['X-Persona-End'] = ''
+    response['X-Products'] = ''
+    response['X-Note-Saved'] = '1'
+    response['X-Note-Id'] = str(note.id)
+    return response
 
 
 def ai_chat_send(request):
@@ -2279,6 +2406,13 @@ def ai_chat_send(request):
     conversation.updated_at = timezone.now()
     conversation.save(update_fields=['updated_at'])
     request.session[AI_CURRENT_CONVERSATION_SESSION_KEY] = conversation.id
+
+    # 'Take this note' / 'note it down' / 'save details...' — save straight
+    # to My Notes and skip the AI model call entirely (see
+    # _ai_save_note_response), so this never costs a free-message credit or
+    # an image/document turn gets mistaken for note-taking.
+    if message and not image_data and not document_text and request_router.is_note_intent(message):
+        return _ai_save_note_response(request, conversation, message)
 
     if not request.user.is_authenticated:
         request.session['ai_guest_msg_count'] = request.session.get('ai_guest_msg_count', 0) + 1
@@ -2718,6 +2852,72 @@ def ai_conversation_delete(request, conversation_id):
     conversation.delete()
     if request.session.get(AI_CURRENT_CONVERSATION_SESSION_KEY) == conversation_id:
         request.session.pop(AI_CURRENT_CONVERSATION_SESSION_KEY, None)
+    return JsonResponse({'status': 'ok'})
+
+
+def ai_notes_list(request):
+    notes = list(
+        AINote.objects.filter(_ai_owner_filter(request))
+        .values('id', 'heading', 'content', 'created_at').order_by('-created_at')[:200]
+    )
+    for n in notes:
+        n['created_at'] = timezone.localtime(n['created_at']).isoformat()
+    return JsonResponse({'status': 'ok', 'notes': notes})
+
+
+def ai_note_delete(request, note_id):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'detail': 'Invalid request method.'}, status=405)
+    note = AINote.objects.filter(_ai_owner_filter(request), pk=note_id).first()
+    if not note:
+        return JsonResponse({'status': 'error', 'detail': 'Note not found.'}, status=404)
+    note.delete()
+    return JsonResponse({'status': 'ok'})
+
+
+AI_REPORT_MAX_EXPLANATION_CHARS = 2000
+
+
+def ai_report_submit(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'detail': 'Invalid request method.'}, status=405)
+    payload = _parse_json_body(request)
+    if not isinstance(payload, dict):
+        return JsonResponse({'status': 'error', 'detail': 'Invalid request body.'}, status=400)
+
+    conversation_id = payload.get('conversation_id')
+    try:
+        conversation_id = int(conversation_id)
+    except (TypeError, ValueError):
+        return JsonResponse({'status': 'error', 'detail': 'Conversation not found.'}, status=400)
+    conversation = AIConversation.objects.filter(_ai_owner_filter(request), pk=conversation_id).first()
+    if not conversation:
+        return JsonResponse({'status': 'error', 'detail': 'Conversation not found.'}, status=404)
+
+    reported_reply = str(payload.get('reply_text', ''))[:AI_CHAT_MAX_MESSAGE_CHARS].strip()
+    explanation = str(payload.get('explanation', ''))[:AI_REPORT_MAX_EXPLANATION_CHARS].strip()
+    model_key = str(payload.get('model_key', ''))[:20]
+    if not reported_reply:
+        return JsonResponse({'status': 'error', 'detail': 'Nothing to report.'}, status=400)
+    if not explanation:
+        return JsonResponse({'status': 'error', 'detail': 'Please explain what went wrong before submitting.'}, status=400)
+
+    # Best-effort link to the actual saved AIMessage row, purely so staff can
+    # jump straight to it from admin — the report is still saved (with its
+    # own snapshot of the text) even when this doesn't find one, e.g. the
+    # message has since been edited or the conversation deleted.
+    message = conversation.messages.filter(
+        role=AIMessage.ROLE_ASSISTANT, content=reported_reply,
+    ).order_by('-created_at').first()
+
+    ip = _client_ip(request)
+    AIReport.objects.create(
+        conversation=conversation, message=message, reported_reply=reported_reply,
+        model_key=model_key, explanation=explanation,
+        user=request.user if request.user.is_authenticated else None,
+        session_key='' if request.user.is_authenticated else (request.session.session_key or ''),
+        ip_address=ip if ip and ip != 'unknown' else None,
+    )
     return JsonResponse({'status': 'ok'})
 
 

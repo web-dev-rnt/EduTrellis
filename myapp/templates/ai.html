@@ -147,6 +147,30 @@ header{background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px s
 .conv-del{border:none;background:none;color:#c3c9d3;cursor:pointer;font-size:.78rem;padding:.2rem;flex-shrink:0;opacity:0;transition:opacity .12s,color .12s}
 .conv-item:hover .conv-del{opacity:1}
 .conv-del:hover{color:var(--red)}
+
+/* ---- sidebar Chats/My Notes tabs + note cards (Google-Keep style) ---- */
+.sidebar-tabs{display:flex;gap:.35rem;padding:.7rem .9rem 0}
+.sidebar-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:.35rem;border:none;background:none;color:#9aa3b0;font-weight:700;font-size:.76rem;padding:.5rem 0;border-radius:9px;cursor:pointer;transition:background .12s,color .12s}
+.sidebar-tab:hover{color:var(--head)}
+.sidebar-tab.active{background:var(--bg-alt);color:var(--red)}
+.note-item{padding:.6rem .65rem;border-radius:10px;margin-bottom:.15rem;transition:background .12s}
+.note-item:hover{background:var(--line)}
+.note-item-head{display:flex;align-items:center;gap:.55rem}
+.note-item-body{font-size:.76rem;color:var(--text);margin:.3rem 0 .15rem;line-height:1.4;white-space:pre-wrap;max-height:4.2em;overflow:hidden}
+.note-item-date{font-size:.66rem;color:#9aa3b0}
+
+/* ---- "report this reply" help text + inline form under a reply ---- */
+.msg-report-row{margin-top:.35rem;font-size:.7rem;color:#9aa3b0;line-height:1.5}
+.msg-report-btn{border:none;background:none;color:var(--red);font-weight:700;font-size:.7rem;cursor:pointer;padding:0;text-decoration:underline}
+.msg-report-form{margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--line)}
+.msg-report-form-label{font-size:.76rem;font-weight:700;color:var(--head);margin:0 0 .35rem}
+.msg-report-textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:.55rem .65rem;font-family:inherit;font-size:.8rem;color:var(--head);background:var(--bg-alt);resize:vertical}
+.msg-report-textarea:focus{outline:none;border-color:var(--red);background:var(--surface)}
+.msg-report-error{font-size:.72rem;color:var(--red);margin:.35rem 0 0;min-height:1em}
+.msg-report-form-actions{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.5rem}
+.msg-report-cancel{border:1.5px solid var(--line);background:var(--surface);color:var(--head);font-weight:700;font-size:.76rem;padding:.4rem .8rem;border-radius:9px;cursor:pointer}
+.msg-report-submit{border:none;background:linear-gradient(135deg,var(--red),var(--red-dark));color:#fff;font-weight:700;font-size:.76rem;padding:.4rem .9rem;border-radius:9px;cursor:pointer}
+.msg-report-submit:disabled{opacity:.55;cursor:default}
 .sidebar-backdrop{display:none}
 
 .chat-shell{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
@@ -499,8 +523,13 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
         <i class="fas fa-moon" id="themeToggleIcon"></i>
       </button>
     </div>
+    <div class="sidebar-tabs" id="sidebarTabs">
+      <button type="button" class="sidebar-tab active" data-tab="chats"><i class="fas fa-message"></i> Chats</button>
+      <button type="button" class="sidebar-tab" data-tab="notes"><i class="fas fa-note-sticky"></i> My Notes</button>
+    </div>
     <button type="button" class="new-chat-btn" id="newChatBtn"><i class="fas fa-plus"></i> New chat</button>
     <div class="conv-list" id="convList"><div class="conv-empty">No conversations yet</div></div>
+    <div class="conv-list" id="notesList" hidden><div class="conv-empty">No notes yet — try saying "note it down" in chat.</div></div>
   </aside>
 
   <div class="chat-shell">
@@ -602,6 +631,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
 
 {% csrf_token %}
 {{ ai_conversations|json_script:"boot-conversations" }}
+{{ ai_notes|json_script:"boot-notes" }}
 {{ ai_model_labels|json_script:"boot-model-labels" }}
 <script>
 (function(){
@@ -621,6 +651,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     currentConversationId: null,
     githubMode: false,
     conversations: JSON.parse(document.getElementById('boot-conversations').textContent || '[]'),
+    notes: JSON.parse(document.getElementById('boot-notes').textContent || '[]'),
     streaming: false,
     guestUsed: AI_GUEST_USED,
     freeUsed: AI_FREE_USED,
@@ -708,6 +739,24 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       var speakBubble = speakBtn.closest('.msg-bubble');
       var speakText = speakBubble && speakBubble.dataset.rawText;
       if (speakText) toggleSpeak(speakBtn, speakText, speakBubble.dataset.persona === '1');
+      return;
+    }
+    var reportBtn = e.target.closest('.msg-report-btn');
+    if (reportBtn) {
+      var reportBubble = reportBtn.closest('.msg-bubble');
+      if (reportBubble) openReportForm(reportBubble);
+      return;
+    }
+    var reportCancelBtn = e.target.closest('.msg-report-cancel');
+    if (reportCancelBtn) {
+      var cancelBubble = reportCancelBtn.closest('.msg-bubble');
+      if (cancelBubble) closeReportForm(cancelBubble);
+      return;
+    }
+    var reportSubmitBtn = e.target.closest('.msg-report-submit');
+    if (reportSubmitBtn) {
+      var submitBubble = reportSubmitBtn.closest('.msg-bubble');
+      if (submitBubble) submitReport(submitBubble, reportSubmitBtn);
     }
   });
   var emptyState = document.getElementById('emptyState');
@@ -745,6 +794,8 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   var attachRemove = document.getElementById('attachRemove');
   var attachError = document.getElementById('attachError');
   var convList = document.getElementById('convList');
+  var notesList = document.getElementById('notesList');
+  var sidebarTabs = document.getElementById('sidebarTabs');
   var newChatBtn = document.getElementById('newChatBtn');
   var sidebar = document.getElementById('sidebar');
   var sidebarToggle = document.getElementById('sidebarToggle');
@@ -1092,14 +1143,94 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   // Stashes the raw (pre-formatMd) reply text on the bubble so the copy
   // button copies clean plain text/markdown, not whatever HTML formatMd()
   // rendered it into (product cards, model tag, etc).
-  function addMsgCopyAction(bubble, rawText){
+  function addMsgCopyAction(bubble, rawText, opts){
     if (!rawText || !rawText.trim()) return;
+    opts = opts || {};
     bubble.dataset.rawText = rawText;
+    if (opts.conversationId) bubble.dataset.conversationId = opts.conversationId;
+    if (opts.modelKey) bubble.dataset.modelKey = opts.modelKey;
     var actions = document.createElement('div');
     actions.className = 'msg-actions';
     actions.innerHTML = '<button type="button" class="msg-copy-btn"><i class="fas fa-copy"></i> Copy</button>' +
       (SPEECH_SYNTH_SUPPORTED ? '<button type="button" class="msg-speak-btn"><i class="fas fa-volume-high"></i> Listen</button>' : '');
     bubble.appendChild(actions);
+    // Skipped for the note-taking confirmation itself ("Saved to your
+    // notes...") — there's nothing there a user would meaningfully report.
+    if (opts.modelKey !== 'note') {
+      var reportRow = document.createElement('div');
+      reportRow.className = 'msg-report-row';
+      reportRow.innerHTML = "Found this answer wrong or abusive? " +
+        '<button type="button" class="msg-report-btn">Report it</button>' +
+        " and we'll fix it within 1 hour.";
+      bubble.appendChild(reportRow);
+    }
+  }
+
+  function openReportForm(bubble){
+    if (bubble.querySelector('.msg-report-form')) return;
+    var row = bubble.querySelector('.msg-report-row');
+    if (row) row.hidden = true;
+    var form = document.createElement('div');
+    form.className = 'msg-report-form';
+    form.innerHTML =
+      '<p class="msg-report-form-label">What went wrong? Please explain.</p>' +
+      '<textarea class="msg-report-textarea" maxlength="2000" rows="3" placeholder="Tell us what was wrong or abusive..."></textarea>' +
+      '<p class="msg-report-error" hidden></p>' +
+      '<div class="msg-report-form-actions">' +
+        '<button type="button" class="msg-report-cancel">Cancel</button>' +
+        '<button type="button" class="msg-report-submit">Submit</button>' +
+      '</div>';
+    bubble.appendChild(form);
+    var ta = form.querySelector('.msg-report-textarea');
+    if (ta) ta.focus();
+    scrollToBottom();
+  }
+
+  function closeReportForm(bubble, thanks){
+    var form = bubble.querySelector('.msg-report-form');
+    if (form) form.remove();
+    var row = bubble.querySelector('.msg-report-row');
+    if (row) {
+      row.hidden = false;
+      if (thanks) row.textContent = "Thanks — we've got your report and will take a look within 1 hour.";
+    }
+  }
+
+  function submitReport(bubble, btn){
+    var form = bubble.querySelector('.msg-report-form');
+    var ta = form && form.querySelector('.msg-report-textarea');
+    var errorEl = form && form.querySelector('.msg-report-error');
+    var explanation = ta ? ta.value.trim() : '';
+    if (!explanation) {
+      if (errorEl) { errorEl.textContent = 'Please explain what went wrong before submitting.'; errorEl.hidden = false; }
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    fetch('/AI/api/report/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+      body: JSON.stringify({
+        conversation_id: bubble.dataset.conversationId ? parseInt(bubble.dataset.conversationId, 10) : state.currentConversationId,
+        reply_text: bubble.dataset.rawText || '',
+        model_key: bubble.dataset.modelKey || '',
+        explanation: explanation,
+      }),
+    }).then(function(resp){ return resp.json().catch(function(){ return {}; }); })
+      .then(function(data){
+        if (data && data.status === 'ok') {
+          closeReportForm(bubble, true);
+        } else {
+          if (errorEl) { errorEl.textContent = (data && data.detail) || 'Something went wrong — please try again.'; errorEl.hidden = false; }
+          btn.disabled = false;
+          btn.textContent = 'Submit';
+        }
+      }).catch(function(){
+        if (errorEl) { errorEl.textContent = 'Something went wrong — please try again.'; errorEl.hidden = false; }
+        btn.disabled = false;
+        btn.textContent = 'Submit';
+      });
   }
 
   function renderRow(role, text, opts){
@@ -1144,7 +1275,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       if (opts.products && opts.products.length) {
         bubble.appendChild(buildProductCards(opts.products));
       }
-      if (role === 'assistant' && !opts.error && !opts.streaming) addMsgCopyAction(bubble, text);
+      if (role === 'assistant' && !opts.error && !opts.streaming) addMsgCopyAction(bubble, text, { conversationId: opts.conversationId, modelKey: opts.modelKey });
     }
     row.appendChild(avatar);
     row.appendChild(bubble);
@@ -2091,7 +2222,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
         emptyState = null;
         data.messages.forEach(function(m){
           var label = m.model_key === 'github' ? 'EduTrellis GitHub' : (m.model_key ? MODEL_LABELS[m.model_key] : null);
-          renderRow(m.role, m.content, { image: m.image_data || null, documentName: m.document_name || null, modelLabel: label, products: m.products || null });
+          renderRow(m.role, m.content, { image: m.image_data || null, documentName: m.document_name || null, modelLabel: label, products: m.products || null, conversationId: id, modelKey: m.model_key });
         });
         renderConvList();
         closeSidebarMobile();
@@ -2121,6 +2252,85 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   });
 
   newChatBtn.addEventListener('click', startNewChat);
+
+  // ---- My Notes sidebar tab — see request_router.is_note_intent /
+  // views._ai_save_note_response for how a note gets created in the first
+  // place (typing 'take this note' / 'note it down' in the chat). ----
+  function renderNotesList(){
+    if (!state.notes.length) {
+      notesList.innerHTML = '<div class="conv-empty">No notes yet — try saying "note it down" in chat.</div>';
+      return;
+    }
+    notesList.innerHTML = '';
+    state.notes.forEach(function(n){
+      var item = document.createElement('div');
+      item.className = 'note-item';
+      item.setAttribute('data-id', n.id);
+      var head = document.createElement('div');
+      head.className = 'note-item-head';
+      var icon = document.createElement('i');
+      icon.className = 'fas fa-note-sticky conv-icon';
+      var title = document.createElement('span');
+      title.className = 'conv-title';
+      title.textContent = n.heading || 'Untitled note';
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'conv-del';
+      del.setAttribute('data-note-del', n.id);
+      del.setAttribute('aria-label', 'Delete note');
+      del.innerHTML = '<i class="fas fa-trash"></i>';
+      head.appendChild(icon);
+      head.appendChild(title);
+      head.appendChild(del);
+      var body = document.createElement('div');
+      body.className = 'note-item-body';
+      body.textContent = n.content;
+      var date = document.createElement('div');
+      date.className = 'note-item-date';
+      date.textContent = new Date(n.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+      item.appendChild(head);
+      item.appendChild(body);
+      item.appendChild(date);
+      notesList.appendChild(item);
+    });
+  }
+  renderNotesList();
+
+  function refreshNotes(){
+    return fetch('/AI/api/notes/', { credentials: 'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data.status === 'ok') { state.notes = data.notes; renderNotesList(); }
+      })
+      .catch(function(){});
+  }
+
+  notesList.addEventListener('click', function(e){
+    var del = e.target.closest('[data-note-del]');
+    if (!del) return;
+    var id = parseInt(del.getAttribute('data-note-del'), 10);
+    fetch('/AI/api/notes/' + id + '/delete/', {
+      method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken() },
+    }).then(function(){
+      state.notes = state.notes.filter(function(n){ return n.id !== id; });
+      renderNotesList();
+    });
+  });
+
+  if (sidebarTabs) {
+    sidebarTabs.addEventListener('click', function(e){
+      var tab = e.target.closest('.sidebar-tab');
+      if (!tab) return;
+      var isNotes = tab.getAttribute('data-tab') === 'notes';
+      Array.prototype.forEach.call(sidebarTabs.querySelectorAll('.sidebar-tab'), function(t){
+        t.classList.toggle('active', t === tab);
+      });
+      newChatBtn.hidden = isNotes;
+      convList.hidden = isNotes;
+      notesList.hidden = !isNotes;
+      if (isNotes) refreshNotes();
+    });
+  }
 
   function openSidebarMobile(){ sidebar.classList.add('open'); sidebarBackdrop.classList.add('open'); }
   function closeSidebarMobile(){ sidebar.classList.remove('open'); sidebarBackdrop.classList.remove('open'); }
@@ -2468,6 +2678,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     var isSumudrika = false;
     var isJagu = false;
     var isPersonaEnd = false;
+    var noteSaved = false;
     // An attached image always gets auto-routed to Vision server-side
     // regardless of the picker (see views.ai_chat_send), so that takes
     // priority over whatever mode is currently selected.
@@ -2488,7 +2699,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       var tagHtml = label ? '<div class="msg-model-tag">' + escHtml(label) + '</div>' : '';
       bubble.innerHTML = tagHtml + (formatMd(assistantText) || '<i>No response — please try again.</i>');
       if (matchedProducts.length) bubble.appendChild(buildProductCards(matchedProducts));
-      addMsgCopyAction(bubble, assistantText);
+      addMsgCopyAction(bubble, assistantText, { conversationId: state.currentConversationId, modelKey: answeredModelKey });
       // Remembered on the bubble itself so a manual replay via Listen later
       // (not just the auto-play right after this reply) still picks the
       // Indian-female voice — see the .msg-speak-btn click handler above.
@@ -2542,6 +2753,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       isSumudrika = resp.headers.get('X-Sumudrika') === '1';
       isJagu = resp.headers.get('X-Jagu') === '1';
       isPersonaEnd = resp.headers.get('X-Persona-End') === '1';
+      noteSaved = resp.headers.get('X-Note-Saved') === '1';
       if (!AI_AUTHENTICATED) { state.guestUsed += 1; updateGuestMeter(); }
 
       if (!resp.body || !resp.body.getReader){
@@ -2584,6 +2796,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       scrollToBottom();
       input.focus();
       refreshConversations();
+      if (noteSaved) refreshNotes();
       // Every reply once either trigger phrase has appeared anywhere in
       // this conversation — never for a normal reply (see is_sumudrika/
       // is_jagu in views.ai_chat_send, which drive the X-Sumudrika/X-Jagu

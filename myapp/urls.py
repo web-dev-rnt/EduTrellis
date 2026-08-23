@@ -10,6 +10,10 @@ urlpatterns = [
     path('aii/', RedirectView.as_view(url='/AI/', permanent=False)),
     path('websitecreation/', views.home2, name='home2'),
     path('websitecreation/contact/', views.websitecreation_contact, name='websitecreation_contact'),
+    # Preserve old/commonly-guessed store URLs while keeping /store/ as the
+    # only indexable canonical URL.
+    path('estore', RedirectView.as_view(url='/store/', permanent=True, query_string=True)),
+    path('estore/', RedirectView.as_view(url='/store/', permanent=True, query_string=True)),
     path('store/', views.estore, name='estore'),
     path('store/manifest.json', views.pwa_manifest, name='pwa_manifest'),
     path('store/sw.js', views.pwa_service_worker, name='pwa_service_worker'),
@@ -91,6 +95,9 @@ urlpatterns = [
     path('AI/api/conversations/', views.ai_conversations_list, name='ai_conversations_list'),
     path('AI/api/conversations/<int:conversation_id>/', views.ai_conversation_messages, name='ai_conversation_messages'),
     path('AI/api/conversations/<int:conversation_id>/delete/', views.ai_conversation_delete, name='ai_conversation_delete'),
+    path('AI/api/notes/', views.ai_notes_list, name='ai_notes_list'),
+    path('AI/api/notes/<int:note_id>/delete/', views.ai_note_delete, name='ai_note_delete'),
+    path('AI/api/report/', views.ai_report_submit, name='ai_report_submit'),
 
     path('AI/api/github/status/', views.github_status, name='github_status'),
     path('AI/api/github/oauth/start/', views.github_oauth_start, name='github_oauth_start'),

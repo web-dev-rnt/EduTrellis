@@ -7,7 +7,7 @@ from .models import (
     Product, ProductImage, ProductColor, AboutUsContent, PolicyPage, PaymentSettings, Payment,
     DropboxSettings, Review, PhoneVerification, PWASettings, FeeSettings,
     EmailSettings, EmailVerification, AIConversation, AIMessage, GitHubConnection,
-    KnowledgeEntry,
+    KnowledgeEntry, AIReport,
 )
 
 
@@ -171,6 +171,36 @@ class AIMessageAdmin(admin.ModelAdmin):
             return '🖼️ image'
         return ''
     attachment.short_description = 'Attachment'
+
+
+@admin.register(AIReport)
+class AIReportAdmin(admin.ModelAdmin):
+    # reported_by mirrors AIConversationAdmin.who_asked — shows at a glance
+    # whether the report came from a real account (with the email needed to
+    # follow up) or an anonymous guest, without opening each row.
+    list_display = ('id', 'reported_by', 'issue_summary', 'model_key', 'status', 'created_at')
+    list_editable = ('status',)
+    list_filter = ('status', 'model_key', 'created_at')
+    search_fields = (
+        'explanation', 'reported_reply', 'user__username', 'user__email',
+        'session_key', 'conversation__title',
+    )
+    list_select_related = ('user', 'conversation')
+    readonly_fields = (
+        'conversation', 'message', 'reported_reply', 'model_key',
+        'user', 'session_key', 'ip_address', 'created_at',
+    )
+
+    def reported_by(self, obj):
+        if obj.user:
+            return f"{obj.user.get_full_name() or obj.user.username} ({obj.user.email or 'no email'})"
+        return f'Guest ({obj.session_key[:10]}…)' if obj.session_key else 'Guest'
+    reported_by.short_description = 'Reported by'
+
+    def issue_summary(self, obj):
+        text = obj.explanation.strip()
+        return (text[:60] + '…') if len(text) > 60 else (text or '(no explanation given)')
+    issue_summary.short_description = 'Issue'
 
 
 @admin.register(KnowledgeEntry)

@@ -905,3 +905,55 @@ class AIMessage(models.Model):
 
     def __str__(self):
         return f"{self.role}: {self.content[:40]}"
+
+
+class AINote(models.Model):
+    """A note saved from the AI chat, Google-Keep style — created when the
+    user says something like 'take this note', 'note it down', or 'save
+    details' (see request_router.is_note_intent / views._ai_save_note_response).
+    Owned the same dual way as AIConversation: a real account, or a guest
+    tied to session_key."""
+    user         = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='ai_notes')
+    session_key  = models.CharField(max_length=40, blank=True, db_index=True)
+    conversation = models.ForeignKey(AIConversation, on_delete=models.SET_NULL, null=True, blank=True, related_name='notes')
+    heading      = models.CharField(max_length=120, blank=True)
+    content      = models.TextField()
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'AI Note'
+        verbose_name_plural = 'AI Notes'
+
+    def __str__(self):
+        return self.heading or f"Note #{self.pk}"
+
+
+class AIReport(models.Model):
+    """A user's 'this answer is wrong / abusive' report against one
+    assistant reply, submitted from the Report button under every AI chat
+    message. Snapshots the reported reply's text and model at submit time
+    (not just a message FK) so staff can still see exactly what was flagged
+    even if the message, or the whole conversation, is later deleted."""
+    STATUS_OPEN = 'open'
+    STATUS_RESOLVED = 'resolved'
+    STATUS_CHOICES = [(STATUS_OPEN, 'Open'), (STATUS_RESOLVED, 'Resolved')]
+
+    conversation   = models.ForeignKey(AIConversation, on_delete=models.SET_NULL, null=True, blank=True, related_name='reports')
+    message        = models.ForeignKey(AIMessage, on_delete=models.SET_NULL, null=True, blank=True, related_name='reports')
+    reported_reply = models.TextField(blank=True)
+    model_key      = models.CharField(max_length=20, blank=True)
+    explanation    = models.TextField(blank=True)
+    user           = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_reports')
+    session_key    = models.CharField(max_length=40, blank=True, db_index=True)
+    ip_address     = models.GenericIPAddressField(null=True, blank=True)
+    status         = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'AI Report'
+        verbose_name_plural = 'AI Reports'
+
+    def __str__(self):
+        return f"Report #{self.pk} ({self.get_status_display()})"
