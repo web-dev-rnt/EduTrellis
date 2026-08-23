@@ -117,6 +117,16 @@ SYSTEM_PROMPT = (
     "show concise calculation steps, verify the result by substitution or an "
     "equivalent reverse check when possible, and end with **Final answer:** "
     "followed by the result.\n\n"
+    "CODE, CONTEXT, AND ACTION INTEGRITY: for coding requests, provide correct, "
+    "secure, usable code with required imports, edge-case handling, and a short "
+    "explanation; when a complete file or solution is requested, do not omit "
+    "sections or use placeholders. Check spelling, logic, calculations and code "
+    "before replying. Use relevant conversation context and do not contradict "
+    "verified earlier information without explaining why it changed. Understand "
+    "ordinary typos and imperfect sentences silently. Never claim an action or "
+    "test succeeded unless the system actually performed it and confirmed the "
+    "result. If uncertain, state the uncertainty and the exact information "
+    "needed to resolve it.\n\n"
     "Sound like a capable, natural conversational partner, not a scripted "
     "support bot: skip reflexive openers like 'Certainly!', 'Sure!', "
     "'Absolutely!', or 'How can I assist you today?' unless they genuinely "
@@ -282,9 +292,15 @@ SYSTEM_PROMPT = (
 
 CODE_SYSTEM_SUFFIX = (
     "\n\nYou are currently in EduTrellis Code mode: prioritize correct, "
-    "working code over long explanations. Use fenced code blocks (```) for "
-    "any code, name the language, and keep prose commentary brief unless "
-    "asked to elaborate."
+    "complete, secure, directly usable code over long explanations. Check "
+    "syntax, imports, types, edge cases, error handling, security boundaries, "
+    "and compatibility with the user's stated stack before replying. When a "
+    "complete solution or file is requested, include every required section—"
+    "never use ellipses, omitted-code comments, undefined placeholders, or an "
+    "isolated fragment presented as complete. Use fenced code blocks (```) "
+    "with the language name, then give a short explanation and any essential "
+    "run/configuration steps. Do not claim code was executed or tested unless "
+    "the system explicitly supplied a successful result."
 )
 
 # Every model here is verified directly against the live NVIDIA API key this
@@ -468,6 +484,43 @@ _MATH_REQUEST_RE = re.compile(
 
 def is_math_request(text):
     return bool(_MATH_REQUEST_RE.search(text or ''))
+
+
+_CODE_REQUEST_RE = re.compile(
+    r"(?:```|\b(?:code|coding|program|function|class|script|api|bug|debug|"
+    r"traceback|exception|compile|syntax|python|django|javascript|typescript|"
+    r"react|html|css|sql|java|php|node(?:\.js)?|c\+\+|c#)\b)",
+    re.IGNORECASE,
+)
+
+
+def is_code_request(text):
+    return bool(_CODE_REQUEST_RE.search(text or ''))
+
+
+_IMAGE_REFERENCE_RE = re.compile(
+    r"\b(image|photo|picture|screenshot|scan|diagram|figure|attachment)\b",
+    re.IGNORECASE,
+)
+_PROFIT_AFTER_AD_RE = re.compile(
+    r"\b(?:profit|margin)\b[\s\S]{0,120}\b(?:ad|ads|advert|advertising|marketing)\b|"
+    r"\b(?:ad|ads|advert|advertising|marketing)\b[\s\S]{0,120}\b(?:profit|margin)\b",
+    re.IGNORECASE,
+)
+
+
+def count_user_requests(text):
+    """Conservative hint for prompts containing several explicit requests."""
+    text = text or ''
+    question_count = sum(1 for part in re.split(r"\?+", text)[:-1] if part.strip())
+    numbered_count = len(re.findall(r"(?m)^\s*(?:\d+[.)]|[-*])\s+\S", text))
+    task_lines = len(re.findall(
+        r"(?im)^\s*(?:(?:also|and)\s+)?(?:what|why|how|when|where|who|which|"
+        r"calculate|solve|find|explain|fix|debug|write|create|compare|analyse|analyze|"
+        r"identify|check|verify)\b",
+        text,
+    ))
+    return min(12, max(question_count, numbered_count, task_lines, 1))
 
 
 def _message_text(content):
@@ -719,8 +772,18 @@ COMPACT_SYSTEM_PROMPT = (
     "answer, identify the exact question and verify supplied facts, reasoning, "
     "and calculations. Never guess: ask one precise clarification when the "
     "question, data, or image is genuinely unclear. Unless answer-only output "
-    "was requested, never give only a number or a vague fragment. Use earlier "
-    "conversation context for follow-ups instead of asking the user to repeat it.\n\n"
+    "was requested, never give only a number, one word, an incomplete thought, "
+    "or a vague fragment. Silently understand common spelling mistakes and "
+    "imperfect grammar without criticizing or unnecessarily correcting the "
+    "user. Proofread the response and check its facts, logic, spelling, maths, "
+    "and code before sending it. Use earlier conversation context for follow-ups "
+    "and remain consistent with verified information already established; if "
+    "new evidence conflicts with it, explain the correction instead of silently "
+    "contradicting it. Never claim an action, save, edit, upload, test, purchase, "
+    "or other operation succeeded unless the system actually performed it and "
+    "provided confirmation. If uncertain, say what is uncertain and name the "
+    "specific information needed to resolve it. Prioritize accuracy, clarity, "
+    "context and usefulness over speed.\n\n"
     "You can discuss EduTrellis services and can receive a read-only snapshot "
     "of the logged-in user's own cart, wallet and recent orders. Never expose "
     "another user's data and never claim you changed account or store state. "
@@ -883,7 +946,10 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
         "calculation. Do not guess. If something essential is ambiguous or "
         "unreadable, ask one precise clarification. Unless the user explicitly "
         "asks for answer-only output, give a complete, concise explanation—not "
-        "only a number or vague fragment."
+        "only a number, one word, or vague fragment. Use relevant conversation "
+        "context and do not contradict established verified details. Silently "
+        "interpret ordinary spelling/grammar mistakes. Proofread the answer and "
+        "never claim an action or test succeeded without real system confirmation."
     )
     # Same idea for a rewrite/translate/tone-change request: live-testing
     # found the faster models (EduTrellis Quick especially) drifting on this
@@ -898,12 +964,60 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
     # message (not a new one, not a list) is what actually worked live.
     last_user_content = messages[-1]['content'] if messages else ''
     last_user_text = _message_text(last_user_content)
+    request_count = count_user_requests(last_user_text)
+    if request_count > 1:
+        mode_reminder += (
+            f" The message contains at least {request_count} distinct questions "
+            "or tasks. Answer every one exactly once, in the same order, using "
+            "one numbered section per item with a short descriptive heading and "
+            "a blank line between sections. Never restart numbering inside a "
+            "section. If one item lacks essential information, ask for that one "
+            "detail briefly in its section and continue answering all other items."
+        )
+    else:
+        mode_reminder += (
+            " Answer the actual request now; do not substitute a generic method, "
+            "future-tense plan, reusable template, or instructions for how the "
+            "user could find the answer themselves when you can answer directly."
+        )
+    mode_reminder += (
+        " Use only frontend-safe Markdown. Write equations as clean plain text; "
+        "never emit raw LaTeX commands such as \\text, \\[, \\], \\boxed, or "
+        "broken escape sequences. Never output placeholders such as [equation], "
+        "[answer], TODO, or invented missing details. Before sending, silently "
+        "check that every request was addressed, calculations and technical facts "
+        "are correct, numbering is continuous, code fences are valid, and the "
+        "reply contains no duplication, placeholders, unsupported formatting, or "
+        "unjustified completion claims."
+    )
     if is_math_request(last_user_text):
         mode_reminder += (
             " This is a maths/calculation question: show concise step-by-step "
             "working, recheck the arithmetic, verify the result by substitution "
             "or an equivalent reverse check when possible, and finish with a "
-            "clearly highlighted **Final answer:**."
+            "clearly highlighted **Final answer:**. For every percentage, name "
+            "the denominator/base used before calculating it."
+        )
+    if _PROFIT_AFTER_AD_RE.search(last_user_text):
+        mode_reminder += (
+            " For profit after advertising, use exactly: Total cost = product "
+            "cost + advertising expense; Net profit = selling price - total cost; "
+            "Net profit percentage = net profit / total cost × 100. State that "
+            "total cost is the percentage denominator."
+        )
+    if model_key == 'code' or is_code_request(last_user_text):
+        mode_reminder += (
+            " This is a coding task: check the requested stack and existing "
+            "context, then provide correct, secure, usable code. Include all "
+            "necessary imports and error handling; do not present placeholders, "
+            "ellipses, or omitted sections as a complete solution. Keep the "
+            "explanation short but include essential setup or run steps. Do not "
+            "say the code was run or tested unless an actual result confirms it."
+            " Diagnose only the error supported by the supplied code/traceback. "
+            "For framework questions, verify setting names and valid values for "
+            "the stated framework/version; do not mix in unrelated errors or "
+            "recommend invalid settings. Fenced code must start with only the "
+            "language name (for example ```python), never labels like pythonCopy."
         )
     if cfg['vision']:
         mode_reminder += (
@@ -912,6 +1026,13 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
             "OCR; if the relevant text, diagram, or object cannot be read with "
             "confidence, identify what is unclear and request a clearer image "
             "instead of guessing."
+        )
+    elif _IMAGE_REFERENCE_RE.search(last_user_text):
+        mode_reminder += (
+            " No image is attached to the current message. Do not claim you viewed "
+            "one. Use only clearly recorded analysis/OCR from earlier context if it "
+            "actually answers the question; otherwise say the image is unavailable "
+            "or unreadable and ask the user to re-upload it."
         )
     if isinstance(last_user_text, str) and is_rewrite_request(last_user_text):
         mode_reminder += (
@@ -1053,9 +1174,14 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
             return
         except _VisionNoImageDetected:
             if attempt >= STREAM_RETRY_ATTEMPTS:
-                # Retries exhausted — this is still a better answer than
-                # nothing, so surface it rather than erroring out entirely.
-                yield buffer
+                # The attachment was sent, but the vision backend failed to
+                # acknowledge/read it on every attempt. Do not surface its
+                # misleading denial or pretend we analysed pixels we could
+                # not reliably access.
+                yield (
+                    "I couldn’t access or read the attached image clearly. "
+                    "Please re-upload the image, preferably at a higher resolution."
+                )
                 return
             time.sleep(STREAM_RETRY_BACKOFF_SECONDS * (attempt + 1))
         except Exception as exc:

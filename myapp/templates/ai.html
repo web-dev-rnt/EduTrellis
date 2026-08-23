@@ -205,8 +205,12 @@ main{flex:1;overflow-y:auto;padding:1.5rem 1.25rem 1rem;background:radial-gradie
 .msg-bubble.md p{margin:.5rem 0}
 .msg-bubble.md p:first-child,.msg-bubble.md .msg-model-tag:first-child + p{margin-top:0}
 .msg-bubble.md >:last-child{margin-bottom:0}
+.msg-bubble.md > ol{margin-top:.55rem;margin-bottom:.3rem;padding-left:.3rem}
+.msg-bubble.md > p + ol{margin-top:.7rem}
+.msg-bubble.md > ol + p{margin-top:.3rem}
 .msg-bubble.md .code-block{margin:.5rem 0;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
-.msg-bubble.md .code-block-head{display:flex;align-items:center;justify-content:space-between;padding:.35rem .7rem;background:rgba(17,20,24,.08);font-size:.72rem;font-weight:700;color:var(--text)}
+.msg-bubble.md .code-block-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.35rem .7rem;background:rgba(17,20,24,.08);font-size:.72rem;font-weight:700;color:var(--text)}
+.msg-bubble.md .code-language-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 :root[data-theme="dark"] .msg-bubble.md .code-block-head{background:rgba(255,255,255,.08)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .msg-bubble.md .code-block-head{background:rgba(255,255,255,.08)}}
 .code-copy-btn{border:none;background:none;color:inherit;font-size:.72rem;font-weight:700;cursor:pointer;padding:.15rem .45rem;border-radius:6px}
@@ -857,15 +861,55 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   // otherwise get bolded, an `_` italicized). Each block becomes a CB{i}
   // placeholder, restored as the very last step — same stash-and-restore
   // approach already used for links via linkifyStash.
+  function cleanCodeLanguage(rawLang){
+    var lang = String(rawLang || '').trim().replace(/copy$/i, '').toLowerCase();
+    var aliases = {
+      py: 'python', python3: 'python', js: 'javascript', jsx: 'javascript',
+      ts: 'typescript', tsx: 'typescript', sh: 'shell', bash: 'shell',
+      ps1: 'powershell', yml: 'yaml', plaintext: 'text', txt: 'text',
+    };
+    lang = aliases[lang] || lang;
+    return /^[a-z0-9+#.-]{1,24}$/.test(lang) ? lang : 'code';
+  }
+
   function extractCodeBlocks(raw, blocks){
-    return String(raw || '').replace(/```([\w+-]*)[ \t]*\r?\n?([\s\S]*?)```/g, function(_, lang, code){
+    return String(raw || '').replace(/```([^\s`]*)[ \t]*\r?\n?([\s\S]*?)```/g, function(_, lang, code){
       code = code.replace(/\n$/, '');
-      var label = lang ? escHtml(lang) : 'code';
-      var head = '<div class="code-block-head"><span>' + label + '</span><button type="button" class="code-copy-btn">Copy</button></div>';
+      var label = escHtml(cleanCodeLanguage(lang));
+      var head = '<div class="code-block-head"><span class="code-language-label">' + label + '</span><button type="button" class="code-copy-btn" aria-label="Copy code">Copy</button></div>';
       var html = '<div class="code-block">' + head + '<pre><code>' + escHtml(code) + '</code></pre></div>';
       blocks.push(html);
       return 'CB' + (blocks.length - 1) + '';
     });
+  }
+
+  // The chat deliberately does not depend on a LaTeX renderer. Convert the
+  // small set of equation syntax models commonly emit into readable plain
+  // text before HTML escaping/Markdown parsing. Code blocks were already
+  // stashed above, so backslashes inside real code are never modified here.
+  function normalizeEquationText(raw){
+    var text = String(raw || '')
+      .replace(/\\\[|\\\]/g, '')
+      .replace(/\\\(|\\\)/g, '')
+      .replace(/\\(?:text|boxed)\s*\{([^{}]*)\}/g, '$1');
+    // A second pass handles simple nesting such as \boxed{\text{Answer}}.
+    text = text.replace(/\\(?:text|boxed)\s*\{([^{}]*)\}/g, '$1');
+    text = text.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, '($1) / ($2)');
+    text = text.replace(/\\sqrt\s*\{([^{}]+)\}/g, 'sqrt($1)');
+    text = text
+      .replace(/\\times\b/g, '×')
+      .replace(/\\div\b/g, '÷')
+      .replace(/\\cdot\b/g, '·')
+      .replace(/\\(?:leq|le)\b/g, '≤')
+      .replace(/\\(?:geq|ge)\b/g, '≥')
+      .replace(/\\neq\b/g, '≠')
+      .replace(/\\approx\b/g, '≈')
+      .replace(/\\pm\b/g, '±')
+      .replace(/\\%/g, '%')
+      .replace(/\\(?:left|right)\b/g, '')
+      .replace(/\\(?:quad|qquad)\b/g, ' ')
+      .replace(/\\([A-Za-z]+)/g, '$1');
+    return text;
   }
 
   function isTableRowLine(t){ return t.indexOf('|') !== -1; }
@@ -910,6 +954,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   function formatMd(raw){
     var codeBlocks = [];
     var text = extractCodeBlocks(raw, codeBlocks);
+    text = normalizeEquationText(text);
     text = escHtml(text);
     var links = [];
     text = linkifyStash(text, links);
@@ -919,6 +964,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     var lines = extractTables(text.split('\n'));
     var out = [];
     var listType = null;
+    var lastOrderedNumber = 0;
     var para = [];
     var quote = [];
     function closeList(){ if (listType) { out.push('</' + listType + '>'); listType = null; } }
@@ -932,7 +978,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
         return;
       }
       var ul = /^[-*•◆●▪‣➤»]\s+(.+)$/.exec(trimmed);
-      var ol = /^\d+[.)]\s+(.+)$/.exec(trimmed);
+      var ol = /^(\d+)[.)]\s+(.+)$/.exec(trimmed);
       var heading = /^#{1,6}\s+(.+)$/.exec(trimmed);
       var quoteLine = /^&gt;\s?(.*)$/.exec(trimmed);
       // A bare line of 3+ =/-/*/_ is decorative: '===' is a Setext heading
@@ -946,8 +992,18 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
         out.push('<li>' + ul[1] + '</li>');
       } else if (ol) {
         flushPara(); flushQuote();
-        if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
-        out.push('<li>' + ol[1] + '</li>');
+        var requestedNumber = parseInt(ol[1], 10) || 1;
+        var displayNumber = listType === 'ol'
+          ? lastOrderedNumber + 1
+          : (requestedNumber > lastOrderedNumber ? requestedNumber : lastOrderedNumber + 1);
+        if (listType !== 'ol') {
+          closeList();
+          out.push(displayNumber === 1 ? '<ol>' : '<ol start="' + displayNumber + '">');
+          listType = 'ol';
+        }
+        var orderedText = ol[2].replace(/^\d+[.)]\s+/, '');
+        out.push('<li>' + orderedText + '</li>');
+        lastOrderedNumber = displayNumber;
       } else if (heading) {
         closeList(); flushPara(); flushQuote();
         out.push('<p><strong>' + heading[1] + '</strong></p>');

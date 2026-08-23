@@ -92,8 +92,13 @@ class AIResponseReliabilityTests(TestCase):
         self.assertTrue(ai_chat.is_math_request('Solve 2x + 5 = 17'))
         self.assertTrue(ai_chat.is_math_request('Calculate 18% of 450'))
         self.assertFalse(ai_chat.is_math_request('Write a friendly customer email'))
+        self.assertTrue(ai_chat.is_code_request('Fix this Django traceback'))
+        self.assertFalse(ai_chat.is_code_request('Write a friendly customer email'))
         self.assertIn('never give only a number', ai_chat.COMPACT_SYSTEM_PROMPT)
         self.assertIn('ask for a clearer image', ai_chat.COMPACT_SYSTEM_PROMPT)
+        self.assertIn('Never claim an action', ai_chat.COMPACT_SYSTEM_PROMPT)
+        self.assertIn('complete, secure, directly usable code', ai_chat.CODE_SYSTEM_SUFFIX)
+        self.assertIn('Do not claim code was executed or tested', ai_chat.CODE_SYSTEM_SUFFIX)
 
         chunk = SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='answer'))])
         client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
@@ -106,6 +111,38 @@ class AIResponseReliabilityTests(TestCase):
         self.assertIn('step-by-step', late_reminder)
         self.assertIn('**Final answer:**', late_reminder)
         self.assertIn('verify the result', late_reminder)
+
+    def test_mixed_multimodal_request_gets_complete_response_rules(self):
+        prompt = (
+            "1. Calculate 15% of 800.\n"
+            "2. Analyze the attached screenshot.\n"
+            "3. Fix this Python error.\n"
+            "4. Explain the relevant Django setting.\n"
+            "5. Check whether the logic is valid.\n"
+            "6. Product cost is 500, advertising is 100, selling price is 900; calculate profit percentage."
+        )
+        self.assertEqual(ai_chat.count_user_requests(prompt), 6)
+        chunk = SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='answer'))])
+        client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
+            create=Mock(return_value=iter([chunk])),
+        )))
+        content = [
+            {'type': 'text', 'text': prompt},
+            {'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,AA=='}},
+        ]
+        with patch('myapp.ai_chat._get_client', return_value=client):
+            list(ai_chat.stream_chat([{'role': 'user', 'content': content}], model_key='vision'))
+
+        sent_messages = client.chat.completions.create.call_args.kwargs['messages']
+        reminder = sent_messages[-2]['content']
+        self.assertIn('Answer every one exactly once', reminder)
+        self.assertIn('numbered section per item', reminder)
+        self.assertIn('Total cost = product cost + advertising expense', reminder)
+        self.assertIn('net profit / total cost × 100', reminder)
+        self.assertIn('frontend-safe Markdown', reminder)
+        self.assertIn('never labels like pythonCopy', reminder)
+        self.assertIn('Analyse the attached image itself', reminder)
+        self.assertIn('continue answering all other items', reminder)
 
     def test_note_router_understands_numbered_read_and_edit_commands(self):
         self.assertEqual(request_router.match_read_note('open note 1'), '1')

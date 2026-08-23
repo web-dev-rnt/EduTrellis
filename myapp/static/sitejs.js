@@ -25,10 +25,17 @@
   var pctEl=document.getElementById('loaderPct');
   var p=0;
   var pTimer=setInterval(function(){p=Math.min(p+Math.random()*12,99);pctEl.textContent=Math.floor(p)+'%';},80);
-  window.addEventListener('load',function(){
+  var finished=false;
+  function finishLoader(){
+    if(finished)return;
+    finished=true;
     clearInterval(pTimer);pctEl.textContent='100%';
-    setTimeout(function(){document.getElementById('loader').classList.add('hidden');},1500);
-  });
+    setTimeout(function(){document.getElementById('loader').classList.add('hidden');},120);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',finishLoader,{once:true});
+  else finishLoader();
+  window.addEventListener('load',finishLoader,{once:true});
+  setTimeout(finishLoader,2500);
 })();
 
 /* ============================================================
