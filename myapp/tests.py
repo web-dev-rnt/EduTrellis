@@ -4,10 +4,13 @@ from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import HttpResponse
+from django.test import RequestFactory
 from django.test import TestCase, override_settings
 
 from . import ai_chat, doc_extract, privacy, request_router
-from .models import AIConversation, AIMessage, StoreProfile
+from .middleware import CanonicalHostMiddleware, PublicAssetCacheMiddleware
+from .models import AIConversation, AIMessage, Cart, Category, Product, StoreProfile
 from .views import AI_CURRENT_CONVERSATION_SESSION_KEY, _ai_document_instruction
 
 
@@ -83,7 +86,7 @@ class AIResponseReliabilityTests(TestCase):
         self.assertEqual(request_router.classify('Debug this Python traceback'), 'code')
         self.assertEqual(request_router.classify('Research the latest facts and sources'), 'research')
         self.assertEqual(request_router.classify('Hello, how are you?'), 'general')
-        self.assertEqual(request_router.choose_model('Fix this JavaScript bug', 'lightning')[0], 'code')
+        self.assertEqual(request_router.choose_model('Fix this JavaScript bug', 'quick')[0], 'code')
 
     @override_settings(AI_USE_PRESIDIO=False)
     def test_fast_privacy_path_redacts_common_identifiers(self):
@@ -103,7 +106,7 @@ class AIResponseReliabilityTests(TestCase):
 
         with patch('myapp.ai_chat._get_client', return_value=client):
             result = ''.join(ai_chat.stream_chat(
-                [{'role': 'user', 'content': 'Hello'}], model_key='lightning'
+                [{'role': 'user', 'content': 'Hello'}], model_key=ai_chat.DEFAULT_MODEL_KEY
             ))
 
         self.assertEqual(result, 'Recovered reply')
@@ -111,6 +114,63 @@ class AIResponseReliabilityTests(TestCase):
         self.assertEqual(
             create.create.call_args_list[1].kwargs['model'],
             ai_chat.MODELS['quick']['id'],
+        )
+
+
+class PublicPagePerformanceAndSEOTests(TestCase):
+    def test_apex_domain_redirects_permanently_to_canonical_www_host(self):
+        middleware = CanonicalHostMiddleware(lambda request: HttpResponse('page'))
+
+        response = middleware(RequestFactory().get(
+            '/store/?category=audio', HTTP_HOST='edutrellis.in', secure=True,
+        ))
+
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(
+            response['Location'],
+            'https://www.edutrellis.in/store/?category=audio',
+        )
+
+    def test_estore_alias_and_missing_slash_use_permanent_redirects(self):
+        alias = self.client.get('/estore')
+        missing_slash = self.client.get('/store')
+
+        self.assertRedirects(alias, '/store/', status_code=301, fetch_redirect_response=False)
+        self.assertRedirects(missing_slash, '/store/', status_code=301, fetch_redirect_response=False)
+
+    def test_anonymous_store_view_does_not_create_an_empty_cart(self):
+        response = self.client.get('/store/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Cart.objects.count(), 0)
+
+    def test_public_assets_receive_browser_cache_headers(self):
+        middleware = PublicAssetCacheMiddleware(lambda request: HttpResponse('asset'))
+
+        static_response = middleware(RequestFactory().get('/static/style.css'))
+        media_response = middleware(RequestFactory().get('/media/products/example.webp'))
+
+        self.assertIn('max-age=86400', static_response['Cache-Control'])
+        self.assertIn('max-age=604800', media_response['Cache-Control'])
+
+    def test_product_page_has_canonical_product_structured_data(self):
+        category = Category.objects.create(name='SEO Test Audio', slug='seo-test-audio')
+        product = Product.objects.create(
+            category=category, slug='test-speaker', brand='EduTrellis',
+            name='Test Speaker', short_description='A test product.',
+            price='999.00', mrp='1299.00', is_active=True,
+        )
+
+        response = self.client.get(f'/store/product/{product.slug}/')
+        schema = json.loads(response.context['product_schema_json'])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(schema['@type'], 'Product')
+        self.assertEqual(schema['offers']['priceCurrency'], 'INR')
+        self.assertContains(
+            response,
+            f'<link rel="canonical" href="https://www.edutrellis.in/store/product/{product.slug}/">',
+            html=True,
         )
 
 
