@@ -12,10 +12,10 @@ import re
 _TOKEN_RE = re.compile(r"[a-z0-9+#.-]+")
 _KEYWORDS = {
     'code': {
-        'api', 'bug', 'code', 'coding', 'css', 'database', 'debug', 'django',
-        'error', 'exception', 'html', 'java', 'javascript', 'node', 'php',
-        'program', 'programming', 'python', 'react', 'sql', 'traceback',
-        'typescript',
+        'api', 'bug', 'class', 'code', 'coding', 'css', 'database', 'debug',
+        'django', 'error', 'exception', 'flask', 'framework', 'function', 'html',
+        'java', 'javascript', 'node', 'php', 'program', 'programming', 'python',
+        'react', 'script', 'sql', 'traceback', 'typescript',
     },
     'research': {
         'compare', 'current', 'evidence', 'fact', 'facts', 'latest', 'news',
@@ -55,6 +55,17 @@ def classify(text):
 def choose_model(text, default_model):
     category = classify(text)
     return {'code': 'code', 'research': 'light'}.get(category, default_model), category
+
+
+def choose_chatgpt_worker(text):
+    """Choose the backing worker for the ChatGPT 5.6 experience.
+
+    Image and document-action routing happens in the view because it depends
+    on validated attachments. Code handles programming requests and Quick
+    handles other text turns.
+    """
+    category = classify(text)
+    return ('code' if category == 'code' else 'quick'), category
 
 
 # ---- "save this as a note" intent, for the My Notes sidebar feature ----
