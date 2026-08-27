@@ -105,6 +105,8 @@ header{background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px s
 .install-banner-btn:hover{background:var(--red-dark)}
 .install-banner-close{border:none;background:none;color:#9aa3b0;cursor:pointer;padding:.3rem;flex-shrink:0;font-size:.85rem}
 .install-banner-close:hover{color:var(--red)}
+.welcome-banner-icon{font-size:1.05rem;color:var(--red);flex-shrink:0}
+.install-banner-text strong{color:var(--red)}
 @media (max-width:480px){
   .install-banner{padding:.5rem .7rem;font-size:.76rem}
   .install-banner-text{font-size:.76rem}
@@ -517,6 +519,12 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     </div>
   </div>
 </header>
+
+<div class="install-banner" id="welcomeBanner" hidden>
+  <i class="fas fa-hand-sparkles welcome-banner-icon"></i>
+  <span class="install-banner-text">Welcome to EduTrellis AI! If any reply is ever wrong or not what you expected, tap <strong>Report it</strong> under that message — we'll fix it within 1 hour.</span>
+  <button type="button" class="install-banner-close" id="welcomeBannerClose" aria-label="Dismiss"><i class="fas fa-xmark"></i></button>
+</div>
 
 <div class="install-banner" id="installBanner" hidden>
   <img src="{% static 'ai-icon-192.png' %}" alt="" class="install-banner-icon">
@@ -1803,6 +1811,21 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       }).catch(function(){});
     });
   }
+
+  // ---- one-time welcome + "report wrong answers" banner for new visitors ----
+  (function setupWelcomeBanner(){
+    var banner = document.getElementById('welcomeBanner');
+    var closeBtn = document.getElementById('welcomeBannerClose');
+    if (!banner) return;
+    var STORAGE_KEY = 'ai_welcome_seen';
+    if (localStorage.getItem(STORAGE_KEY) === '1') return;
+    function dismiss(){
+      banner.hidden = true;
+      localStorage.setItem(STORAGE_KEY, '1');
+    }
+    setTimeout(function(){ banner.hidden = false; }, 500);
+    if (closeBtn) closeBtn.addEventListener('click', dismiss);
+  })();
 
   // ---- install as an app ----
   (function setupInstallPrompt(){
