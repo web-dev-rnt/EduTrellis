@@ -345,7 +345,7 @@ MODELS = {
         # as the stable identity shown in the conversation.
         'id': 'nvidia/nemotron-3-nano-30b-a3b',
         'label': 'ChatGPT 5.6',
-        'description': 'Advanced GPT-style help for everyday questions, reasoning, coding, writing, and images.',
+        'description': "OpenAI's most powerful model — best for everyday questions, reasoning, coding, writing, and images.",
         'reasoning': True,
         'vision': False,
         'router': True,
