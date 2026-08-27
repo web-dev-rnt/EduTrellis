@@ -2683,6 +2683,18 @@ def ai_chat_send(request):
     requested_language = payload.get('language')
     language = requested_language if requested_language in ai_chat.LANGUAGES else ai_chat.DEFAULT_LANGUAGE
 
+    # ChatGPT 5.6 is a stable user-facing selection backed by the existing
+    # task-specific workers. Keep its public identity while routing the actual
+    # turn to Vision, Code, or Quick.
+    requested_model_key = payload.get('model')
+    selected_model_key = (
+        requested_model_key
+        if requested_model_key in ai_chat.MODELS
+        else ai_chat.DEFAULT_MODEL_KEY
+    )
+    chatgpt_mode = selected_model_key == ai_chat.CHATGPT_56_MODEL_KEY
+    response_model_key = ai_chat.CHATGPT_56_MODEL_KEY if chatgpt_mode else None
+
     # An attached image can only be understood by the vision model —
     # whatever the user had selected, this specific turn is auto-routed
     # there. Otherwise use their chosen model, falling back to the default
@@ -2695,12 +2707,16 @@ def ai_chat_send(request):
         model_key = 'code'
         request_category = 'coding'
     else:
-        requested_model_key = payload.get('model')
-        model_key = requested_model_key if requested_model_key in ai_chat.MODELS else ai_chat.DEFAULT_MODEL_KEY
-        if model_key == ai_chat.DEFAULT_MODEL_KEY and payload.get('auto_route', True):
+        model_key = selected_model_key
+        if chatgpt_mode:
+            model_key, request_category = request_router.choose_chatgpt_worker(message)
+        elif model_key == ai_chat.DEFAULT_MODEL_KEY and payload.get('auto_route', True):
             model_key, request_category = request_router.choose_model(message, model_key)
         else:
             request_category = request_router.classify(message)
+
+    if response_model_key is None:
+        response_model_key = model_key
 
     if not request.user.is_authenticated:
         if not request.session.session_key:
@@ -2790,6 +2806,35 @@ def ai_chat_send(request):
         StoreProfile.objects.filter(user=request.user).exclude(
             ai_subscription_until__gt=timezone.now(),
         ).update(ai_free_messages_used=F('ai_free_messages_used') + 1)
+
+    # First-time-in-AI-chat onboarding: ask a genuinely new user (once) for
+    # their name/location/Instagram, then deterministically capture whatever
+    # they give in their very next reply — never trust the model itself to
+    # record it, same reasoning as the My Notes system above. Skipped for
+    # staff (site admins/developers, not real customers) and guests (there's
+    # no account to save it against).
+    onboarding_ask = False
+    if request.user.is_authenticated and not request.user.is_staff:
+        onboarding_profile, _ = StoreProfile.objects.get_or_create(user=request.user)
+        if onboarding_profile.ai_onboarding_pending:
+            fields = ai_chat.extract_onboarding_fields(message) if message else {}
+            update_fields = ['ai_onboarding_pending', 'ai_onboarded']
+            onboarding_profile.ai_onboarding_pending = False
+            onboarding_profile.ai_onboarded = True
+            if fields.get('name'):
+                onboarding_profile.ai_display_name = fields['name'][:100]
+                update_fields.append('ai_display_name')
+            if fields.get('location'):
+                onboarding_profile.ai_location = fields['location'][:150]
+                update_fields.append('ai_location')
+            if fields.get('instagram'):
+                onboarding_profile.ai_instagram_handle = fields['instagram'].lstrip('@')[:60]
+                update_fields.append('ai_instagram_handle')
+            onboarding_profile.save(update_fields=update_fields)
+        elif not onboarding_profile.ai_onboarded:
+            onboarding_ask = True
+            onboarding_profile.ai_onboarding_pending = True
+            onboarding_profile.save(update_fields=['ai_onboarding_pending'])
 
     recent = list(
         conversation.messages.order_by('-created_at')
@@ -2947,7 +2992,9 @@ def ai_chat_send(request):
         had_error = False
         try:
             for chunk in ai_chat.stream_chat(
-                clean_history, model_key=model_key, account_context=account_context,
+                clean_history, model_key=model_key,
+                identity_model_key=(response_model_key if response_model_key != model_key else None),
+                account_context=account_context,
                 retrieved_context=retrieved_context, retrieved_source=retrieved_source,
                 sumudrika=is_sumudrika, sumudrika_greet=is_sumudrika_greet,
                 jagu=is_jagu, jagu_greet=is_jagu_greet,
@@ -2955,6 +3002,7 @@ def ai_chat_send(request):
                 has_product_matches=bool(matched_products),
                 document_instruction=document_instruction,
                 max_tokens=(AI_DOCUMENT_CODE_MAX_OUTPUT_TOKENS if document_mode == 'coding' else None),
+                onboarding_ask=onboarding_ask,
             ):
                 full_reply += chunk
                 yield chunk
@@ -2984,7 +3032,7 @@ def ai_chat_send(request):
                     if AIConversation.objects.filter(pk=conversation.pk).exists():
                         AIMessage.objects.create(
                             conversation=conversation, role=AIMessage.ROLE_ASSISTANT,
-                            content=full_reply, model_key=model_key,
+                            content=full_reply, model_key=response_model_key,
                             product_slugs=','.join(p.slug for p in matched_products),
                         )
                 except Exception:
@@ -3016,7 +3064,8 @@ def ai_chat_send(request):
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     response['X-Conversation-Id'] = str(conversation.id)
-    response['X-Model-Key'] = model_key
+    response['X-Model-Key'] = response_model_key
+    response['X-Routed-Model-Key'] = model_key
     response['X-Request-Category'] = request_category if not image_data else 'image'
     # Tells the frontend to auto-play this reply and show the persona
     # follow-up chips — true for every turn once the matching trigger

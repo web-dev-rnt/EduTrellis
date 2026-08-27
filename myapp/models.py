@@ -56,6 +56,16 @@ class StoreProfile(models.Model):
     ai_subscription_until = models.DateTimeField(null=True, blank=True, help_text="EduTrellis AI access is unlimited until this time. Blank/past = free tier.")
     ai_free_messages_used = models.PositiveIntegerField(default=0, help_text="Free-tier EduTrellis AI messages sent so far (resets on each new subscription purchase).")
 
+    # First-time AI chat onboarding — asked once, on this account's first
+    # real AI reply, then captured from whatever they say next (see
+    # views.ai_chat_send and ai_chat.extract_onboarding_fields). Values are
+    # saved only if the user actually volunteers them; never required.
+    ai_onboarded = models.BooleanField(default=False, help_text="Already asked the first-time name/location/Instagram question (or the account predates this feature) — never ask again.")
+    ai_onboarding_pending = models.BooleanField(default=False, help_text="The question was just asked; the user's next message will be parsed for an answer.")
+    ai_display_name = models.CharField(max_length=100, blank=True, help_text="Name the user gave the AI chat, if any.")
+    ai_location = models.CharField(max_length=150, blank=True, help_text="Location the user gave the AI chat, if any.")
+    ai_instagram_handle = models.CharField(max_length=60, blank=True, help_text="Instagram handle the user gave the AI chat, if any (no leading @).")
+
     class Meta:
         verbose_name = 'Store Customer Profile'
         verbose_name_plural = 'Store Customer Profiles'

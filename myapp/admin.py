@@ -121,9 +121,9 @@ class EmailVerificationAdmin(admin.ModelAdmin):
 
 @admin.register(StoreProfile)
 class StoreProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'phone', 'wallet_balance', 'phone_verified')
-    search_fields = ('user__username', 'user__email', 'phone')
-    list_filter = ('phone_verified',)
+    list_display = ('user', 'phone', 'wallet_balance', 'phone_verified', 'ai_display_name', 'ai_location', 'ai_instagram_handle')
+    search_fields = ('user__username', 'user__email', 'phone', 'ai_display_name', 'ai_location', 'ai_instagram_handle')
+    list_filter = ('phone_verified', 'ai_onboarded')
 
 
 class AIMessageInline(admin.TabularInline):

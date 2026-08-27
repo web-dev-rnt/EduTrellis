@@ -902,13 +902,63 @@ def _is_model_unavailable_error(exc):
     )
 
 
+# First-time-in-AI-chat onboarding (see views.ai_chat_send and
+# StoreProfile.ai_onboarded/ai_onboarding_pending). Asking is the model's
+# job; recording the answer is not — same reasoning as My Notes above, since
+# a model can't reliably guarantee a field was actually saved. The reply is
+# parsed separately by extract_onboarding_fields() below, deterministically.
+ONBOARDING_ASK_NOTE = (
+    "\n\nThis is this user's very first message to EduTrellis AI. Before or "
+    "alongside answering it, warmly greet them — something like 'Hello! How "
+    "are you today?' — and ask them to share their name, their location "
+    "(city), and their Instagram ID/handle, briefly explaining this helps "
+    "give them more accurate answers and recommendations. Make it sound "
+    "friendly and optional, not like a mandatory form — they're free to "
+    "skip it and just keep chatting. Still fully answer their actual "
+    "message in the same reply; don't make them wait for a separate turn "
+    "to get real help."
+)
+
+
+def extract_onboarding_fields(reply_text):
+    """Best-effort structured pull of {'name', 'location', 'instagram'} out
+    of a user's free-text reply to the ONBOARDING_ASK_NOTE question above.
+    Returns only the keys the user actually gave (never guesses/invents),
+    or {} on empty input or any extraction failure — the caller (views.
+    ai_chat_send) treats onboarding as "asked" either way and never retries."""
+    text = (reply_text or '').strip()
+    if not text:
+        return {}
+    system = (
+        "The user was just asked to share their name, their location "
+        "(city/place), and their Instagram username, for a personalisation "
+        "profile. From their reply below, extract ONLY the values they "
+        'actually gave. Reply with ONLY a JSON object using any of the keys '
+        '"name", "location", "instagram" — include a key only if that '
+        "detail is clearly present in the reply; omit it otherwise. Never "
+        "guess or invent a value. If none of the three are present, reply "
+        "with {}."
+    )
+    try:
+        result = _github_llm_json(_get_client(), MODELS['quick']['id'], system, text)
+    except Exception:
+        return {}
+    if not isinstance(result, dict):
+        return {}
+    return {
+        key: str(result[key]).strip()
+        for key in ('name', 'location', 'instagram')
+        if key in result and isinstance(result[key], (str, int, float)) and str(result[key]).strip()
+    }
+
+
 def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
                  account_context=None,
                  retrieved_context=None, retrieved_source=None, sumudrika=False,
                  sumudrika_greet=True, jagu=False, jagu_greet=True,
                  persona_farewell=False, language=DEFAULT_LANGUAGE,
                  has_product_matches=False, document_instruction=None,
-                 max_tokens=None):
+                 max_tokens=None, onboarding_ask=False):
     """messages: [{role: 'user'|'assistant', content: str | list}, ...] — the
     caller's conversation so far, already trimmed/sanitized. 'content' is a
     plain string for text-only turns, or a list of OpenAI-style content
@@ -932,6 +982,11 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
     a given conversation, so this doesn't need to say which one.
     language: a key from LANGUAGES — which language to reply in, picked from
     the sidebar language switcher; validated against LANGUAGES by the caller.
+    onboarding_ask: True only on a logged-in user's first real AI reply ever
+    (see views.ai_chat_send) — tells the model to greet them and ask for
+    name/location/Instagram alongside answering; the caller, not the model,
+    is responsible for actually parsing/saving whatever they say next (see
+    extract_onboarding_fields), same reasoning as the My Notes system.
     Yields text chunks as they arrive from the model."""
     cfg = MODELS.get(model_key) or MODELS[DEFAULT_MODEL_KEY]
     identity_key = identity_model_key or model_key
@@ -1178,6 +1233,8 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
         late_reminders.append({'role': 'system', 'content': sumudrika_system_note(greet=sumudrika_greet, farewell=persona_farewell)})
     if jagu:
         late_reminders.append({'role': 'system', 'content': jagu_system_note(greet=jagu_greet, farewell=persona_farewell)})
+    if onboarding_ask:
+        late_reminders.append({'role': 'system', 'content': ONBOARDING_ASK_NOTE})
     if messages:
         full_messages = [{'role': 'system', 'content': system_prompt}] + messages[:-1] + late_reminders + [messages[-1]]
     else:
