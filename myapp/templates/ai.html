@@ -283,6 +283,22 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
 .model-option-desc{font-size:.7rem;color:#9aa3b0;line-height:1.35}
 .msg-model-tag{font-size:.66rem;font-weight:800;color:var(--red);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em}
 
+/* ---- one-time "we have multiple models" popup for new visitors ---- */
+.model-intro-popup{position:absolute;bottom:calc(100% + .8rem);left:0;width:min(300px,86vw);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 34px rgba(17,20,24,.2);padding:.9rem .95rem .85rem;z-index:32}
+.model-intro-popup:not([hidden]){display:block}
+.model-intro-popup::after{content:'';position:absolute;top:100%;left:22px;width:0;height:0;border:7px solid transparent;border-top-color:var(--surface)}
+.model-intro-close{position:absolute;top:.55rem;right:.6rem;border:none;background:none;color:#9aa3b0;cursor:pointer;font-size:.85rem;line-height:1;padding:.25rem}
+.model-intro-close:hover{color:var(--red)}
+.model-intro-title{font-size:.84rem;font-weight:800;color:var(--head);margin:0 1.4rem .6rem 0}
+.model-intro-list{display:flex;flex-direction:column;gap:.5rem;max-height:220px;overflow-y:auto;margin-bottom:.75rem}
+.model-intro-item-label{display:block;font-size:.78rem;font-weight:700;color:var(--red)}
+.model-intro-item-desc{display:block;font-size:.71rem;color:var(--text);line-height:1.35}
+.model-intro-btn{width:100%;border:none;background:linear-gradient(135deg,var(--red),var(--red-dark));color:#fff;font-weight:700;font-size:.8rem;padding:.55rem;border-radius:10px;cursor:pointer}
+@media (max-width:480px){
+  .model-intro-popup{left:auto;right:0;width:min(280px,80vw)}
+  .model-intro-popup::after{left:auto;right:22px}
+}
+
 /* ---- GitHub mode (staff-only) ---- */
 .github-wrap{position:relative;flex-shrink:0;align-self:center}
 /* icon-only, sized to match the other composer controls (mic/attach/camera)
@@ -582,6 +598,19 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
               <span class="model-option-desc">{{ m.description }}</span>
             </button>
             {% endfor %}
+          </div>
+          <div class="model-intro-popup" id="modelIntroPopup" hidden>
+            <button type="button" class="model-intro-close" id="modelIntroClose" aria-label="Dismiss"><i class="fas fa-xmark"></i></button>
+            <p class="model-intro-title">We now have multiple AI models — try them!</p>
+            <div class="model-intro-list">
+              {% for m in ai_models %}
+              <div class="model-intro-item">
+                <span class="model-intro-item-label">{{ m.label }}</span>
+                <span class="model-intro-item-desc">{{ m.description }}</span>
+              </div>
+              {% endfor %}
+            </div>
+            <button type="button" class="model-intro-btn" id="modelIntroGotIt">Got it</button>
           </div>
         </div>
         {% if ai_user.is_staff %}
@@ -1071,6 +1100,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   // dots alone about roughly what's happening while you wait.
   var STATUS_PHRASES = {
     default: ['Thinking', 'Generating answer'],
+    chatgpt56: ['Understanding your request', 'Thinking', 'Generating answer'],
     light: ['Searching', 'Checking knowledge base', 'Generating answer'],
     vision: ['Looking at your image', 'Generating answer'],
     code: ['Reading your code', 'Generating answer'],
@@ -1538,7 +1568,6 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       if (!opt) return;
       var changed = currentModel !== key;
       currentModel = key;
-      localStorage.setItem('ai_model', key);
       modelPickerLabel.textContent = opt.getAttribute('data-label');
       modelDropdown.querySelectorAll('.model-option').forEach(function(o){ o.classList.toggle('active', o === opt); });
       // Instant confirmation the switch registered, decoupled from waiting
@@ -1551,10 +1580,6 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       applyGithubAvailability();
     };
 
-    var savedModel = localStorage.getItem('ai_model');
-    if (savedModel && modelDropdown.querySelector('[data-model="' + savedModel + '"]')) {
-      applyModelSelection(savedModel);
-    }
     applyGithubAvailability();
 
     function openDropdown(){
@@ -1807,6 +1832,31 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     if (closeBtn) closeBtn.addEventListener('click', function(){
       banner.hidden = true;
       localStorage.setItem('ai_install_dismissed', '1');
+    });
+  })();
+
+  // ---- one-time "we have multiple models" popup for new visitors ----
+  (function setupModelIntroPopup(){
+    var popup = document.getElementById('modelIntroPopup');
+    var closeBtn = document.getElementById('modelIntroClose');
+    var gotItBtn = document.getElementById('modelIntroGotIt');
+    var pickerBtn = document.getElementById('modelPickerBtn');
+    if (!popup) return;
+    var STORAGE_KEY = 'ai_model_intro_seen';
+    if (localStorage.getItem(STORAGE_KEY) === '1') return;
+    function dismiss(){
+      popup.hidden = true;
+      localStorage.setItem(STORAGE_KEY, '1');
+    }
+    setTimeout(function(){ popup.hidden = false; }, 1200);
+    if (closeBtn) closeBtn.addEventListener('click', dismiss);
+    if (gotItBtn) gotItBtn.addEventListener('click', dismiss);
+    // Opening the real model dropdown, sending a message, or clicking
+    // elsewhere on the page all count as "seen" — don't leave a stale
+    // popup sitting on screen once the user has moved on.
+    if (pickerBtn) pickerBtn.addEventListener('click', dismiss);
+    document.addEventListener('click', function(e){
+      if (!popup.hidden && !popup.contains(e.target) && e.target !== pickerBtn) dismiss();
     });
   })();
 
