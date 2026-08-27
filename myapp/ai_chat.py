@@ -303,14 +303,53 @@ CODE_SYSTEM_SUFFIX = (
     "the system explicitly supplied a successful result."
 )
 
-# Every model here is verified directly against the live NVIDIA API key this
-# app uses — being listed in NVIDIA's catalog doesn't mean a given account
-# actually has invoke access to it, and several plausible choices (dedicated
-# "coder" checkpoints, nvidia/vila, mistral-large) 404'd for this account.
+CHATGPT_56_MODEL_KEY = 'chatgpt56'
+CHATGPT_56_SYSTEM_SUFFIX = (
+    "\n\nYou are answering through EduTrellis's ChatGPT 5.6 experience. "
+    "Be natural, context-aware, capable, and conversational, with the clear, "
+    "helpful interaction style users expect from ChatGPT. For ordinary "
+    "greetings or introductions, introduce yourself simply as 'ChatGPT 5.6 "
+    "in EduTrellis AI', state what you can help with, and answer the user's "
+    "request; do not volunteer provider names, worker names, routing, or other "
+    "backend implementation details unless asked.\n\n"
+    "IDENTITY — answer every time, worded however fits the conversation, but "
+    "always the same underlying fact: whenever asked who made/created/built "
+    "you, what company is behind you, or who developed you, answer that you "
+    "are ChatGPT, developed by OpenAI. Give this exact answer consistently, "
+    "not a different one each time. Never say EduTrellis, Rudra, NVIDIA, "
+    "Nemotron, 'EduTrellis Quick/Code/Vision', or any routing/backend detail "
+    "generated the reply — OpenAI is the only creator you name, every time "
+    "this is asked, however it's phrased ('who made you', 'who built you', "
+    "'who created you', 'what company is behind you', etc).\n\n"
+    "If asked for more model detail, keep these facts accurate and "
+    "consistent: OpenAI's gpt-5.6 API alias routes to gpt-5.6-sol; GPT-5.6 "
+    "Sol is OpenAI's flagship frontier option for complex professional work, "
+    "Terra balances intelligence and cost, and Luna is intended for "
+    "cost-sensitive, high-volume work. The official GPT-5.6 family supports "
+    "text and image input and text output. Never invent an affiliation, "
+    "subscription tier, price, release date, benchmark, or capability that "
+    "is not supplied in these instructions."
+)
+
+# Every backing model here is verified against the live NVIDIA account.
+# Being listed in NVIDIA's catalog doesn't mean a given account has invoke
+# access, and several plausible choices (dedicated "coder" checkpoints,
+# nvidia/vila, mistral-large) 404'd for this account.
 # 'reasoning' models emit hidden chain-of-thought unless explicitly told not
 # to (chat_template_kwargs.enable_thinking=False) — without that flag they
 # dump raw "Let me think..." text into the reply instead of a clean answer.
 MODELS = {
+    CHATGPT_56_MODEL_KEY: {
+        # A user-facing automatic route, not a separate upstream endpoint.
+        # The view selects Quick/Code/Vision per turn and passes this key back
+        # as the stable identity shown in the conversation.
+        'id': 'nvidia/nemotron-3-nano-30b-a3b',
+        'label': 'ChatGPT 5.6',
+        'description': 'Advanced GPT-style help for everyday questions, reasoning, coding, writing, and images.',
+        'reasoning': True,
+        'vision': False,
+        'router': True,
+    },
     'ultra': {
         'id': 'nvidia/nemotron-3-ultra-550b-a55b',
         'label': 'EduTrellis Ultra',
@@ -370,7 +409,7 @@ MODELS = {
         'vision': True,
     },
 }
-DEFAULT_MODEL_KEY = 'quick'
+DEFAULT_MODEL_KEY = CHATGPT_56_MODEL_KEY
 
 LANGUAGES = {
     'en': 'English',
@@ -756,8 +795,11 @@ _client = None
 # instructions. This compact version keeps the product/account/identity and
 # safety behaviour while substantially reducing input-token processing time.
 COMPACT_SYSTEM_PROMPT = (
-    "You are EduTrellis AI, developed for EduTrellis by Rudra Narayan Tiwari, "
-    "Team Leader of its Sales and Tech teams. Vijay Tiwari is the founder. "
+    "You are the currently selected assistant inside EduTrellis AI. The "
+    "EduTrellis AI website integration was developed for EduTrellis by Rudra "
+    "Narayan Tiwari, Team Leader of its Sales and Tech teams. Vijay Tiwari is "
+    "the founder. Follow the current-model identity instructions below when "
+    "asked who created the underlying model. "
     "Respond like an excellent conversational assistant: lead with the answer, "
     "infer intent from context, and be direct without sounding robotic. Avoid "
     "generic openings such as 'Certainly' or 'As an AI', avoid repeating the "
@@ -835,7 +877,8 @@ def _is_model_unavailable_error(exc):
     )
 
 
-def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
+def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
+                 account_context=None,
                  retrieved_context=None, retrieved_source=None, sumudrika=False,
                  sumudrika_greet=True, jagu=False, jagu_greet=True,
                  persona_farewell=False, language=DEFAULT_LANGUAGE,
@@ -866,22 +909,29 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
     the sidebar language switcher; validated against LANGUAGES by the caller.
     Yields text chunks as they arrive from the model."""
     cfg = MODELS.get(model_key) or MODELS[DEFAULT_MODEL_KEY]
+    identity_key = identity_model_key or model_key
+    identity_cfg = MODELS.get(identity_key) or cfg
     client = _get_client()
+    current_content = messages[-1].get('content') if messages else None
+    has_current_image = isinstance(current_content, list) and any(
+        block.get('type') == 'image_url' for block in current_content
+        if isinstance(block, dict)
+    )
 
     # Told explicitly which of the four EduTrellis modes it's answering as —
     # otherwise it has no way to correctly answer "which model/mode is this"
     # and would either guess or fall back to a generic non-answer.
     current_mode_line = (
-        f"\n\nYou are currently running as {cfg['label']} ({cfg['description']}). "
+        f"\n\nYou are currently running as {identity_cfg['label']} ({identity_cfg['description']}). "
         "If asked which model, mode, or version you are, answer with this name "
         "and description — not any other mode's name. The user may have "
         "switched modes partway through this conversation, so if any earlier "
         "message — including one of your own past replies — named a "
-        f"different mode, ignore it: you are {cfg['label']} right now, "
+        f"different mode, ignore it: you are {identity_cfg['label']} right now, "
         "starting with this reply, so always answer based on this current "
         "instruction, never a stale identity from earlier in the chat."
     )
-    if cfg['vision']:
+    if cfg['vision'] and has_current_image:
         # Live-testing found this mode randomly claiming "I don't see an
         # image" roughly a third of the time on messages that DID have one
         # attached — reproducible even at temperature=0, and it went away
@@ -897,7 +947,11 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
             "see or weren't given an image when one is attached to the "
             "current message."
         )
-    system_prompt = COMPACT_SYSTEM_PROMPT + current_mode_line + (CODE_SYSTEM_SUFFIX if model_key == 'code' else '')
+    system_prompt = COMPACT_SYSTEM_PROMPT + current_mode_line
+    if model_key == 'code':
+        system_prompt += CODE_SYSTEM_SUFFIX
+    if identity_key == CHATGPT_56_MODEL_KEY:
+        system_prompt += CHATGPT_56_SYSTEM_SUFFIX
     if account_context:
         system_prompt += (
             "\n\nThe user is logged into their EduTrellis Store account. Here is "
@@ -937,7 +991,7 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
     # the very start of the conversation) is what actually overrides that —
     # models weight a recent message far more than one buried at position 0.
     mode_reminder = (
-        f"Reminder: right now, for THIS reply, you are {cfg['label']} — "
+        f"Reminder: right now, for THIS reply, you are {identity_cfg['label']} — "
         "not whatever mode may have answered earlier turns in this chat. "
         "If an earlier message here — including one of your own past "
         "replies — named a different mode, that's outdated: the user "
@@ -1019,7 +1073,7 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
             "recommend invalid settings. Fenced code must start with only the "
             "language name (for example ```python), never labels like pythonCopy."
         )
-    if cfg['vision']:
+    if cfg['vision'] and has_current_image:
         mode_reminder += (
             " Analyse the attached image itself carefully before answering. "
             "Use only details that are actually visible or supported by supplied "
@@ -1125,7 +1179,7 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, account_context=None,
     # caller yet in this attempt — once real content is already on its way
     # to the browser, restarting from scratch would duplicate/garble it, so
     # a mid-stream failure just stops here instead.
-    check_vision_opening = cfg['vision']
+    check_vision_opening = cfg['vision'] and has_current_image
     request_started = time.perf_counter()
     first_token_logged = False
     for attempt in range(STREAM_RETRY_ATTEMPTS + 1):
