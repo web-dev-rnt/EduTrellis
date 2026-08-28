@@ -13,7 +13,9 @@ from myapp import business_info
 logger = logging.getLogger(__name__)
 
 MAX_TOKENS = 2048
-TEMPERATURE = 0.5
+TEMPERATURE = 0.5          # baseline/fallback
+TEMPERATURE_PRECISE = 0.4      # maths or code turns — consistency matters more than variety here
+TEMPERATURE_CONVERSATIONAL = 0.7  # everyday chat turns — a flat low temperature made phrasing repetitive/stiff
 TOP_P = 0.95
 STREAM_RETRY_ATTEMPTS = 1          # one retry, and only for transient failures
 STREAM_RETRY_BACKOFF_SECONDS = 0.5
@@ -543,17 +545,39 @@ def is_followup_reference(text):
     return len(words) <= 12 and bool(_FOLLOWUP_REFERENCE_RE.search(text or ''))
 
 
-_MATH_REQUEST_RE = re.compile(
-    r"(?:\d\s*[+\-*/×÷=^]\s*\d|\b(?:calculate|compute|solve|equation|"
-    r"algebra|geometry|arithmetic|percentage|percent|fraction|derivative|"
-    r"integral|factorise|factorize|simplify|square root|mean|median|mode|"
-    r"probability|profit|loss|interest|ratio)\b)",
+_MATH_SYMBOL_RE = re.compile(r"\d\s*[+\-*/×÷=^]\s*\d")
+_MATH_KEYWORD_RE = re.compile(
+    r"\b(?:calculate|compute|solve|equation|algebra|geometry|arithmetic|"
+    r"percentage|percent|fraction|derivative|integral|factorise|factorize|"
+    r"simplify|square root|mean|median|mode|probability|profit|loss|"
+    r"interest|ratio)\b",
     re.IGNORECASE,
+)
+_MATH_REQUEST_RE = re.compile(
+    f"(?:{_MATH_SYMBOL_RE.pattern}|{_MATH_KEYWORD_RE.pattern})", re.IGNORECASE,
 )
 
 
 def is_math_request(text):
     return bool(_MATH_REQUEST_RE.search(text or ''))
+
+
+def is_complex_math_request(text):
+    """Narrower than is_math_request — True only when the maths genuinely
+    warrants shown working and a verified 'Final answer:' line: a
+    keyword-signalled problem (equation, percentage, profit, etc), an
+    expression with more than one operator, or a number large enough that
+    mental arithmetic is actually error-prone. False for a single trivial
+    one-step sum ('what's 12+5?'), which the forced step-by-step ritual
+    only made stiffer, not more accurate."""
+    text = text or ''
+    if _MATH_KEYWORD_RE.search(text):
+        return True
+    if not _MATH_SYMBOL_RE.search(text):
+        return False
+    if len(re.findall(r'[+\-*/×÷^]', text)) >= 2:
+        return True
+    return any(len(n.replace('.', '')) >= 4 for n in re.findall(r'\d+(?:\.\d+)?', text))
 
 
 _CODE_REQUEST_RE = re.compile(
@@ -1074,10 +1098,14 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
     if account_context:
         system_prompt += (
             "\n\nThe user is logged into their EduTrellis Store account. Here is "
-            "their real account data as of right now — use it only if they ask "
-            "about their cart, orders, wallet, or account; don't recite it "
-            "unprompted, and never state a cart/order detail that isn't listed "
-            "here:\n" + account_context
+            "their real account data as of right now. Cart/orders/wallet: use "
+            "only if they ask about their cart, orders, wallet, or account; "
+            "don't recite it unprompted, and never state a cart/order detail "
+            "that isn't listed here. Their name/location, if given below: you "
+            "may use these naturally where it fits — e.g. an occasional "
+            "greeting by name, or a locally relevant note — the way a person "
+            "who already knows someone would, without forcing it into every "
+            "reply or turning it into a running theme:\n" + account_context
         )
     if retrieved_context:
         source_label = {
@@ -1163,7 +1191,8 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
         "reply contains no duplication, placeholders, unsupported formatting, or "
         "unjustified completion claims."
     )
-    if is_math_request(last_user_text):
+    turn_is_complex_math = is_complex_math_request(last_user_text)
+    if turn_is_complex_math:
         mode_reminder += (
             " This is a maths/calculation question: show concise step-by-step "
             "working, recheck the arithmetic, verify the result by substitution "
@@ -1178,7 +1207,8 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
             "Net profit percentage = net profit / total cost × 100. State that "
             "total cost is the percentage denominator."
         )
-    if model_key == 'code' or is_code_request(last_user_text):
+    turn_is_code = model_key == 'code' or is_code_request(last_user_text)
+    if turn_is_code:
         mode_reminder += (
             " This is a coding task: check the requested stack and existing "
             "context, then provide correct, secure, usable code. Include all "
@@ -1279,10 +1309,16 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
     else:
         full_messages = [{'role': 'system', 'content': system_prompt}] + late_reminders
 
+    if turn_is_complex_math or turn_is_code:
+        temperature = TEMPERATURE_PRECISE
+    elif cfg['vision']:
+        temperature = TEMPERATURE  # unchanged — not live-tested against a higher value
+    else:
+        temperature = TEMPERATURE_CONVERSATIONAL
     kwargs = dict(
         model=cfg['id'],
         messages=full_messages,
-        temperature=TEMPERATURE,
+        temperature=temperature,
         top_p=TOP_P,
         max_tokens=max_tokens or MAX_TOKENS,
         stream=True,

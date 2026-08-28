@@ -2024,6 +2024,14 @@ def _ai_account_context(user):
 
     profile = getattr(user, 'store_profile', None)
     if profile:
+        # Name/location the user gave the AI chat during onboarding (see
+        # ai_chat_send's onboarding block) — surfaced here so a returning
+        # user is actually remembered/addressed naturally instead of the
+        # assistant asking who they are again every conversation.
+        if profile.ai_display_name:
+            lines.append(f"This user previously told the assistant their name is {profile.ai_display_name}.")
+        if profile.ai_location:
+            lines.append(f"This user previously told the assistant they're located in {profile.ai_location}.")
         lines.append(f"Wallet balance: Rs {profile.wallet_balance}.")
 
     cart = Cart.objects.filter(user=user).first()
