@@ -643,6 +643,38 @@ _STORE_CHECK_RE = re.compile(
     re.IGNORECASE,
 )
 
+# No connected model can actually output an image file — live user reports
+# (AIReport #7, #8, #9, #11, #12, #14-#19) showed this failing two ways:
+# some replies string the user along with clarifying questions before
+# eventually admitting it, and at least one (#7) hallucinated a fake
+# ![...](attachment://...) markdown image link claiming a nonexistent edit
+# had been produced. Catching the request up front, before the model tries
+# to comply, heads off both — it never gets far enough to invent a fake
+# result. Deliberately broad (generate/create/make/design/draw/edit/change
+# + an image-shaped noun) since a missed variant means the model is left to
+# improvise on its own again, which is the exact failure being fixed here.
+# Bidirectional (verb-then-noun OR noun-then-verb) because a fair share of
+# real reports phrased this in Hindi/Hinglish word order — "Background
+# change kijiye" (noun first), not "change the background" (verb first).
+_IMAGE_GEN_VERB = (
+    r"generate|create|make|design|draw|produce|edit|change|update|remove|"
+    r"give me|prepare|convert|banao|banado|bana do|banaiye|banane"
+)
+_IMAGE_GEN_NOUN = (
+    r"image|photo|picture|poster|logo|wallpaper|banner|graphic|artwork|"
+    r"thumbnail|flyer|invitation|invite|background|illustration|icon|"
+    r"avatar|sticker|greeting card"
+)
+_IMAGE_GENERATION_RE = re.compile(
+    rf"\b(?:{_IMAGE_GEN_VERB})\b[\s\S]{{0,40}}\b(?:{_IMAGE_GEN_NOUN})\b|"
+    rf"\b(?:{_IMAGE_GEN_NOUN})\b[\s\S]{{0,40}}\b(?:{_IMAGE_GEN_VERB})\b",
+    re.IGNORECASE,
+)
+
+
+def is_image_generation_request(text):
+    return bool(_IMAGE_GENERATION_RE.search(text or ''))
+
 
 def is_store_check_request(text):
     return bool(_STORE_CHECK_RE.search(text or ''))
@@ -911,6 +943,12 @@ COMPACT_SYSTEM_PROMPT = (
     "text may also be supplied, but verify it against the image where possible. "
     "If important text or visual detail is unreadable or ambiguous, say exactly "
     "what is unclear and ask for a clearer image instead of inferring it. "
+    "You cannot generate, draw, design, or edit an image, poster, logo, "
+    "wallpaper, or any other visual file — that is temporarily under "
+    "maintenance. Never output an image markdown tag, attachment link, or "
+    "any other reference implying an image file was produced — you have no "
+    "way to actually create one, and claiming otherwise is worse than "
+    "saying you can't. "
     "Refer to modes only by their displayed EduTrellis label unless the label "
     "itself names the underlying model."
 )
@@ -1236,6 +1274,23 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
             "one. Use only clearly recorded analysis/OCR from earlier context if it "
             "actually answers the question; otherwise say the image is unavailable "
             "or unreadable and ask the user to re-upload it."
+        )
+    if isinstance(last_user_text, str) and is_image_generation_request(last_user_text):
+        mode_reminder += (
+            " This message is asking you to create, generate, draw, design, "
+            "or edit an image, poster, logo, wallpaper, banner, or similar "
+            "visual file — a capability you do not have right now; it is "
+            "temporarily under maintenance. Say so plainly and warmly on "
+            "this very first reply: image generation and editing is "
+            "temporarily under maintenance and will be back within 24 "
+            "hours. Do not ask clarifying questions about the image first "
+            "and only reveal this after — lead with it. You may briefly "
+            "offer to help with something else instead (the wording/copy "
+            "for it, a written brief, code, etc) only if it genuinely fits, "
+            "but do not attempt the visual itself, do not describe a "
+            "finished visual as if it were delivered, and never output an "
+            "image markdown tag, attachment link, or any other reference "
+            "implying a file was produced."
         )
     if isinstance(last_user_text, str) and is_rewrite_request(last_user_text):
         mode_reminder += (
