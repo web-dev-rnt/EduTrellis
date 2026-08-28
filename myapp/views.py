@@ -1962,7 +1962,15 @@ def dashboard_logout(request):
 AI_CHAT_RATE_LIMIT = 30           # messages
 AI_CHAT_RATE_WINDOW = 10 * 60     # per 10 minutes, per IP
 AI_CHAT_MAX_MESSAGE_CHARS = 16000
-AI_CHAT_MAX_HISTORY = 20          # last 10 user+assistant turns — bounded context keeps later turns responsive
+AI_CHAT_MAX_HISTORY = 20          # last 10 user+assistant turns — outer cap on how many rows are even fetched
+# A per-message-count cap alone doesn't bound size: an attached document can
+# replay up to 15,000 chars on every later turn, so a handful of document
+# turns can approach the model's real context window even within 20
+# messages. This is a second, size-based trim applied on top of the count
+# cap (see the clean_history loop below) — roughly 4 chars/token, so this
+# budget leaves headroom under typical 32k+ context windows once the system
+# prompt, late reminders, and reply tokens are also accounted for.
+AI_CHAT_HISTORY_CHAR_BUDGET = 48000
 AI_CONVERSATION_TITLE_CHARS = 60
 AI_CURRENT_CONVERSATION_SESSION_KEY = 'ai_current_conversation_id'
 AI_GUEST_MESSAGE_LIMIT = 6        # free messages before a guest must log in/sign up
@@ -2875,6 +2883,23 @@ def ai_chat_send(request):
             content = m['content']
         clean_history.append({'role': m['role'], 'content': content})
 
+    # Drop the oldest turns (documents/images first pushed the total over
+    # budget) until the whole history fits, always keeping at least the
+    # current turn — a long-running conversation with attachments degrades
+    # gracefully instead of eventually overflowing the model's context
+    # window (see AI_CHAT_HISTORY_CHAR_BUDGET above).
+    def _content_char_len(content):
+        if isinstance(content, str):
+            return len(content)
+        if isinstance(content, list):
+            return sum(len(b.get('text', '')) for b in content if isinstance(b, dict))
+        return 0
+
+    while len(clean_history) > 1 and (
+        sum(_content_char_len(m['content']) for m in clean_history) > AI_CHAT_HISTORY_CHAR_BUDGET
+    ):
+        clean_history.pop(0)
+
     # Keep saved conversation text intact for the user, but redact common
     # personal identifiers in the copy sent to the external model.
     for history_message in clean_history:
@@ -3020,6 +3045,15 @@ def ai_chat_send(request):
                 # after useful text has arrived. Keep that text visible
                 # instead of replacing it with a generic failure message.
                 yield "\n\n[Response interrupted. You can retry if anything is missing.]"
+            elif ai_chat._is_context_length_error(e):
+                # Retrying would just fail again identically — the fixed
+                # generic message was misleading here, since it reads as
+                # transient when the real fix is a shorter message/thread.
+                yield (
+                    "This conversation (or an attached document) has gotten "
+                    "too long for the AI to process in one go. Please start "
+                    "a new chat, or ask about a shorter excerpt."
+                )
             else:
                 yield "The AI service did not respond. Please try again."
         finally:

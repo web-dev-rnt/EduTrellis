@@ -12,8 +12,8 @@ from myapp import business_info
 
 logger = logging.getLogger(__name__)
 
-MAX_TOKENS = 1200
-TEMPERATURE = 1.0
+MAX_TOKENS = 2048
+TEMPERATURE = 0.5
 TOP_P = 0.95
 STREAM_RETRY_ATTEMPTS = 1          # one retry, and only for transient failures
 STREAM_RETRY_BACKOFF_SECONDS = 0.5
@@ -914,6 +914,19 @@ def _is_transient_error(exc):
     return any(term in name or term in text for term in (
         'timeout', 'connection', 'ratelimit', 'rate limit', 'temporar',
         'overload', 'worker local total request limit',
+    ))
+
+
+def _is_context_length_error(exc):
+    """A 400 specifically because the request itself is too long for the
+    model's context window. Retrying without shortening it will just fail
+    again, so the caller (views.ai_chat_send) surfaces a distinct,
+    actionable message here instead of the generic transient-failure text."""
+    status = getattr(exc, 'status_code', None)
+    text = str(exc).lower()
+    return status == 400 and any(term in text for term in (
+        'context length', 'context_length', 'maximum context',
+        'too many tokens', 'token limit', 'reduce the length',
     ))
 
 
