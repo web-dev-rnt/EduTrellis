@@ -1962,7 +1962,7 @@ def dashboard_logout(request):
 AI_CHAT_RATE_LIMIT = 30           # messages
 AI_CHAT_RATE_WINDOW = 10 * 60     # per 10 minutes, per IP
 AI_CHAT_MAX_MESSAGE_CHARS = 16000
-AI_CHAT_MAX_HISTORY = 16          # bounded context keeps later turns responsive
+AI_CHAT_MAX_HISTORY = 20          # last 10 user+assistant turns — bounded context keeps later turns responsive
 AI_CONVERSATION_TITLE_CHARS = 60
 AI_CURRENT_CONVERSATION_SESSION_KEY = 'ai_current_conversation_id'
 AI_GUEST_MESSAGE_LIMIT = 6        # free messages before a guest must log in/sign up
