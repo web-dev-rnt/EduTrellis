@@ -5,6 +5,7 @@ import re
 import time
 from zoneinfo import ZoneInfo
 
+import requests
 from django.conf import settings
 from openai import OpenAI
 
@@ -1015,6 +1016,112 @@ def _get_gemini_client():
 
 def _client_for(cfg):
     return _get_gemini_client() if cfg.get('provider') == 'gemini' else _get_client()
+
+
+GEMINI_IMAGE_MODEL_ID = 'gemini-2.5-flash-image'
+GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai'
+
+
+def generate_image(prompt, input_image_data_uri=None):
+    """Single non-streaming call to Gemini's image-generation model
+    ('nano-banana'), used when a Gemini-mode turn is asking to create/edit
+    an image (see is_image_generation_request + views.ai_chat_send). Made
+    with a raw requests call rather than through the openai SDK client used
+    everywhere else in this file — the Chat Completions spec the SDK's
+    response models are built against types message.content as plain text,
+    and Google's image-output shape (a list of content parts, or images
+    under a separate field — unverified against a real successful response
+    at the time this was written, since this account had zero image-model
+    quota during development) risks the SDK's typed parsing dropping or
+    choking on it. A raw request guarantees the exact JSON Google sent is
+    what gets parsed here, and is easy to adjust once real responses can
+    be inspected.
+
+    input_image_data_uri: when given (the user attached/generated an image
+    earlier this turn and is asking to edit it, e.g. "remove the boys from
+    this image"), it's sent as an image_url content block alongside the
+    text prompt — same wire format Gemini already accepts for vision input
+    — so the model edits that actual photo instead of generating an
+    unrelated new one from the text alone.
+
+    Returns (data_uri, caption, error): data_uri is a full
+    'data:image/...;base64,...' string on success, else None; caption is
+    any accompanying text the model returned (may be empty); error is a
+    short user-facing string on failure, else None. Never raises — every
+    failure mode (network, HTTP error, unparseable/missing image) is
+    reported through the third element instead."""
+    if not settings.GEMINI_API_KEY:
+        return None, '', "Gemini isn't configured on this server yet — GEMINI_API_KEY needs to be set."
+    if input_image_data_uri:
+        user_content = [
+            {'type': 'text', 'text': prompt},
+            {'type': 'image_url', 'image_url': {'url': input_image_data_uri}},
+        ]
+    else:
+        user_content = prompt
+    try:
+        resp = requests.post(
+            f'{GEMINI_BASE_URL}/chat/completions',
+            headers={'Authorization': f'Bearer {settings.GEMINI_API_KEY}', 'Content-Type': 'application/json'},
+            json={'model': GEMINI_IMAGE_MODEL_ID, 'messages': [{'role': 'user', 'content': user_content}]},
+            timeout=60,
+        )
+    except requests.RequestException as e:
+        return None, '', f'Could not reach the image service: {e}'
+    if resp.status_code >= 400:
+        detail = resp.text
+        try:
+            detail = resp.json().get('error', {}).get('message', detail)
+        except ValueError:
+            pass
+        logger.warning("Gemini image generation failed status=%d detail=%s", resp.status_code, detail[:300])
+        return None, '', f'Image generation failed: {detail[:200]}'
+    try:
+        data = resp.json()
+        message = data['choices'][0]['message']
+    except (KeyError, IndexError, ValueError):
+        logger.warning("Gemini image generation: unexpected response shape: %s", resp.text[:500])
+        return None, '', 'Image generation returned an unexpected response.'
+
+    content = message.get('content')
+    data_uri, caption_parts = None, []
+    if isinstance(content, list):
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get('type') == 'image_url':
+                data_uri = (block.get('image_url') or {}).get('url')
+            elif block.get('type') == 'text' and block.get('text'):
+                caption_parts.append(block['text'])
+    elif isinstance(content, str):
+        # Fallback in case the image comes back inlined as a data: URI
+        # within plain text rather than a structured content block.
+        match = re.search(r'data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+', content)
+        if match:
+            data_uri = match.group(0)
+            caption_parts.append(content[:match.start()].strip())
+        else:
+            caption_parts.append(content)
+
+    if not data_uri:
+        # Last resort: some APIs return generated images under a top-level
+        # 'images' field (on the message or the response) instead of inside
+        # content — check common shapes before giving up.
+        for images_field in (message.get('images'), data.get('images')):
+            if isinstance(images_field, list) and images_field and isinstance(images_field[0], dict):
+                first = images_field[0]
+                data_uri = (
+                    (first.get('image_url') or {}).get('url')
+                    or first.get('url')
+                    or (f"data:image/png;base64,{first['b64_json']}" if first.get('b64_json') else None)
+                )
+                if data_uri:
+                    break
+
+    if not data_uri:
+        logger.warning("Gemini image generation: no image found in response: %s", resp.text[:500])
+        return None, '', 'The model responded without producing an image — try rephrasing the request.'
+    return data_uri, ' '.join(caption_parts).strip(), None
 
 
 def _is_transient_error(exc):

@@ -369,6 +369,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
 .document-action-hint{flex:1 1 100%;font-size:.72rem;color:var(--text);line-height:1.4}
 .attach-error{max-width:780px;margin:.4rem auto 0;font-size:.75rem;color:var(--red);text-align:center;font-weight:600}
 .msg-img{max-width:220px;max-height:220px;border-radius:12px;display:block;margin-bottom:.45rem;object-fit:cover}
+.msg-img-generated{max-width:100%;width:360px;max-height:none;border-radius:12px;display:block;margin-bottom:.45rem;object-fit:contain}
 .msg-doc-chip{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.15);border-radius:8px;padding:.35rem .6rem;font-size:.78rem;font-weight:600;margin-bottom:.45rem}
 .msg-row.assistant .msg-doc-chip{background:var(--tint);color:var(--red)}
 
@@ -1406,8 +1407,11 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
         // markup, since a crafted value could otherwise break out of an
         // attribute and inject HTML.
         var imgEl = document.createElement('img');
-        imgEl.className = 'msg-img';
-        imgEl.alt = 'Attached image';
+        // An assistant-role image is something Gemini generated/edited —
+        // the actual answer, shown at a real viewing size — vs. a user's
+        // own uploaded attachment, kept as a small cropped preview.
+        imgEl.className = role === 'assistant' ? 'msg-img-generated' : 'msg-img';
+        imgEl.alt = role === 'assistant' ? 'Generated image' : 'Attached image';
         imgEl.src = opts.image;
         bubble.insertBefore(imgEl, bubble.firstChild);
       }
@@ -2889,6 +2893,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     var isJagu = false;
     var isPersonaEnd = false;
     var noteSaved = false;
+    var attemptingImage = false;
     // An attached image always gets auto-routed to Vision server-side
     // regardless of the picker (see views.ai_chat_send), so that takes
     // priority over whatever mode is currently selected.
@@ -2964,6 +2969,7 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
       isJagu = resp.headers.get('X-Jagu') === '1';
       isPersonaEnd = resp.headers.get('X-Persona-End') === '1';
       noteSaved = resp.headers.get('X-Notes-Changed') === '1';
+      attemptingImage = resp.headers.get('X-Attempting-Image') === '1';
       if (!AI_AUTHENTICATED) { state.guestUsed += 1; updateGuestMeter(); }
 
       if (!resp.body || !resp.body.getReader){
@@ -3001,6 +3007,30 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     }).then(function(result){
       if (result === null) return; // gated — bubble already removed
       finalizeBubble();
+      // A generated/edited image can't travel in a header (too large) or
+      // in the plain-text stream body (that's just the caption) — it was
+      // saved server-side as this reply's AIMessage.image_data instead, so
+      // pick it up with a small follow-up fetch of the conversation this
+      // turn just landed in, and drop it into the bubble that's already
+      // showing the caption. Same field/endpoint used for a normal history
+      // reload — see renderRow's image handling, which this mirrors.
+      if (attemptingImage && state.currentConversationId) {
+        fetch('/AI/api/conversations/' + state.currentConversationId + '/')
+          .then(function(r){ return r.json(); })
+          .then(function(data){
+            if (data.status !== 'ok' || !data.messages || !data.messages.length) return;
+            var last = data.messages[data.messages.length - 1];
+            if (last.role === 'assistant' && last.image_data) {
+              var imgEl = document.createElement('img');
+              imgEl.className = 'msg-img-generated';
+              imgEl.alt = 'Generated image';
+              imgEl.src = last.image_data;
+              bubble.insertBefore(imgEl, bubble.firstChild);
+              scrollToBottom();
+            }
+          })
+          .catch(function(){});
+      }
       activeAbort = null;
       setStreaming(false);
       scrollToBottom();

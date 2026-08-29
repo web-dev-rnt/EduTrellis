@@ -2744,6 +2744,16 @@ def ai_chat_send(request):
     if response_model_key is None:
         response_model_key = model_key
 
+    # Real generation/editing, Gemini only — every other model still gets
+    # the "temporarily under maintenance" line from stream_chat's own
+    # prompt (see is_image_generation_request there). image_data (if any —
+    # Gemini keeps it rather than rerouting, see above) is passed through
+    # to ai_chat.generate_image below as the photo to edit, rather than
+    # generating an unrelated new image from the text alone.
+    is_gemini_image_request = (
+        model_key == 'gemini' and bool(message) and ai_chat.is_image_generation_request(message)
+    )
+
     if not request.user.is_authenticated:
         if not request.session.session_key:
             request.session.create()
@@ -3033,7 +3043,28 @@ def ai_chat_send(request):
     def event_stream():
         full_reply = ''
         had_error = False
+        generated_image_data = ''
         try:
+            if is_gemini_image_request:
+                # Not a token stream — a single blocking call that either
+                # returns a whole image or doesn't. Still yielded through
+                # the same StreamingHttpResponse as everything else so the
+                # existing headers/response plumbing doesn't need a parallel
+                # path; the frontend picks the image up via a small
+                # follow-up fetch keyed on X-Attempting-Image (see below —
+                # the response body here can only carry text, an image this
+                # size doesn't fit safely in a header the way X-Products does).
+                data_uri, caption, gen_error = ai_chat.generate_image(message, input_image_data_uri=image_data or None)
+                if not gen_error and data_uri and len(data_uri) > AI_IMAGE_MAX_DATA_URI_CHARS:
+                    gen_error = 'The generated image was too large to save — please try a simpler request.'
+                if gen_error:
+                    had_error = True
+                    yield gen_error
+                else:
+                    generated_image_data = data_uri
+                    full_reply = caption or "Here's the image you asked for."
+                    yield full_reply
+                return
             for chunk in ai_chat.stream_chat(
                 clean_history, model_key=model_key,
                 identity_model_key=(response_model_key if response_model_key != model_key else None),
@@ -3085,6 +3116,7 @@ def ai_chat_send(request):
                         AIMessage.objects.create(
                             conversation=conversation, role=AIMessage.ROLE_ASSISTANT,
                             content=full_reply, model_key=response_model_key,
+                            image_data=generated_image_data,
                             product_slugs=','.join(p.slug for p in matched_products),
                         )
                 except Exception:
@@ -3099,9 +3131,11 @@ def ai_chat_send(request):
                 # Skipped for the sumudrika/jagu easter eggs — those replies
                 # are warm, personal content about Rudra and the people
                 # close to him, never something worth remembering as a
-                # reusable "fact". Never blocks or fails the actual chat
-                # reply if this errors.
-                if not is_sumudrika and not is_jagu and retrieved_source != 'company_site':
+                # reusable "fact" — and skipped for a generated image, since
+                # the saved "reply" is just a short caption, not a real
+                # answer worth reusing for a future unrelated question.
+                # Never blocks or fails the actual chat reply if this errors.
+                if not is_sumudrika and not is_jagu and not is_gemini_image_request and retrieved_source != 'company_site':
                     try:
                         light_mode.save_from_chat(
                             message, full_reply, account_context=account_context,
@@ -3119,6 +3153,14 @@ def ai_chat_send(request):
     response['X-Model-Key'] = response_model_key
     response['X-Routed-Model-Key'] = model_key
     response['X-Request-Category'] = request_category if not image_data else 'image'
+    # Whether an image might land on this reply — known up front (it's just
+    # the intent-match, not the actual result), since whether generation
+    # actually succeeded is only known once event_stream() runs, too late
+    # for a header. The frontend uses this to decide whether to bother with
+    # a follow-up fetch after the stream ends to pick up the saved image
+    # (see the same reasoning as X-Products, but an image is too large to
+    # ever put directly in a header the way that payload is).
+    response['X-Attempting-Image'] = '1' if is_gemini_image_request else ''
     # Tells the frontend to auto-play this reply and show the persona
     # follow-up chips — true for every turn once the matching trigger
     # phrase has appeared anywhere in the conversation (same scope as
