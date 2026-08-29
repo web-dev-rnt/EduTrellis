@@ -5,7 +5,6 @@ import re
 import time
 from zoneinfo import ZoneInfo
 
-import requests
 from django.conf import settings
 from openai import OpenAI
 
@@ -441,35 +440,6 @@ MODELS = {
         'description': 'Understands images — used automatically when you attach a photo.',
         'reasoning': False,
         'vision': True,
-    },
-    # Google's Gemini, via its official OpenAI-compatible endpoint (see
-    # _get_gemini_client) rather than NVIDIA's — the only entry here with
-    # 'provider': 'gemini'. Uses settings.GEMINI_API_KEY, a separate key
-    # from NVIDIA_API_KEY. Live-verified against the real API on 2026-08-29:
-    # 'gemini-2.5-flash' 404s for this key with "no longer available to new
-    # users... use models/gemini-3.6-flash" — Google has moved the
-    # generation on since, so this points at the newer one instead.
-    # 'reasoning': False because the NVIDIA-specific chat_template_kwargs
-    # thinking-suppression payload doesn't apply to Gemini; if a "thinking"
-    # preamble is ever seen leaking into replies, Gemini's newer models
-    # support suppressing it a different way (extra_body={'google':
-    # {'thinking_config': {'thinking_budget': 0}}}) — not added here since
-    # it hasn't been needed/tested yet.
-    'gemini': {
-        'id': 'gemini-3.6-flash',
-        'label': 'Gemini 3.6 Flash',
-        'description': "Google's Gemini — fast, strong general reasoning, writing, and coding.",
-        'reasoning': False,
-        # True (unlike every other non-dedicated-vision entry above) — when
-        # Gemini is the selected model, views.ai_chat_send keeps model_key
-        # as 'gemini' instead of overriding it to 'vision'/'code' for an
-        # image or a coding-mode document, since Gemini handles both
-        # natively. This flag is what makes the image content block
-        # actually get attached to the API call in that case (see the
-        # clean_history loop in views.py) — without it, the image would
-        # silently never reach the model at all.
-        'vision': True,
-        'provider': 'gemini',
     },
 }
 DEFAULT_MODEL_KEY = CHATGPT_56_MODEL_KEY
@@ -996,134 +966,6 @@ def _get_client():
     return _client
 
 
-_gemini_client = None
-
-
-def _get_gemini_client():
-    """Google's Gemini has an official OpenAI-compatible endpoint, so this
-    reuses the same openai SDK — just a different base_url/key — rather than
-    adding a whole second HTTP client dependency for one model."""
-    global _gemini_client
-    if _gemini_client is None:
-        _gemini_client = OpenAI(
-            base_url='https://generativelanguage.googleapis.com/v1beta/openai/',
-            api_key=settings.GEMINI_API_KEY,
-            timeout=25.0,
-            max_retries=0,
-        )
-    return _gemini_client
-
-
-def _client_for(cfg):
-    return _get_gemini_client() if cfg.get('provider') == 'gemini' else _get_client()
-
-
-GEMINI_IMAGE_MODEL_ID = 'gemini-2.5-flash-image'
-GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai'
-
-
-def generate_image(prompt, input_image_data_uri=None):
-    """Single non-streaming call to Gemini's image-generation model
-    ('nano-banana'), used when a Gemini-mode turn is asking to create/edit
-    an image (see is_image_generation_request + views.ai_chat_send). Made
-    with a raw requests call rather than through the openai SDK client used
-    everywhere else in this file — the Chat Completions spec the SDK's
-    response models are built against types message.content as plain text,
-    and Google's image-output shape (a list of content parts, or images
-    under a separate field — unverified against a real successful response
-    at the time this was written, since this account had zero image-model
-    quota during development) risks the SDK's typed parsing dropping or
-    choking on it. A raw request guarantees the exact JSON Google sent is
-    what gets parsed here, and is easy to adjust once real responses can
-    be inspected.
-
-    input_image_data_uri: when given (the user attached/generated an image
-    earlier this turn and is asking to edit it, e.g. "remove the boys from
-    this image"), it's sent as an image_url content block alongside the
-    text prompt — same wire format Gemini already accepts for vision input
-    — so the model edits that actual photo instead of generating an
-    unrelated new one from the text alone.
-
-    Returns (data_uri, caption, error): data_uri is a full
-    'data:image/...;base64,...' string on success, else None; caption is
-    any accompanying text the model returned (may be empty); error is a
-    short user-facing string on failure, else None. Never raises — every
-    failure mode (network, HTTP error, unparseable/missing image) is
-    reported through the third element instead."""
-    if not settings.GEMINI_API_KEY:
-        return None, '', "Gemini isn't configured on this server yet — GEMINI_API_KEY needs to be set."
-    if input_image_data_uri:
-        user_content = [
-            {'type': 'text', 'text': prompt},
-            {'type': 'image_url', 'image_url': {'url': input_image_data_uri}},
-        ]
-    else:
-        user_content = prompt
-    try:
-        resp = requests.post(
-            f'{GEMINI_BASE_URL}/chat/completions',
-            headers={'Authorization': f'Bearer {settings.GEMINI_API_KEY}', 'Content-Type': 'application/json'},
-            json={'model': GEMINI_IMAGE_MODEL_ID, 'messages': [{'role': 'user', 'content': user_content}]},
-            timeout=60,
-        )
-    except requests.RequestException as e:
-        return None, '', f'Could not reach the image service: {e}'
-    if resp.status_code >= 400:
-        detail = resp.text
-        try:
-            detail = resp.json().get('error', {}).get('message', detail)
-        except ValueError:
-            pass
-        logger.warning("Gemini image generation failed status=%d detail=%s", resp.status_code, detail[:300])
-        return None, '', f'Image generation failed: {detail[:200]}'
-    try:
-        data = resp.json()
-        message = data['choices'][0]['message']
-    except (KeyError, IndexError, ValueError):
-        logger.warning("Gemini image generation: unexpected response shape: %s", resp.text[:500])
-        return None, '', 'Image generation returned an unexpected response.'
-
-    content = message.get('content')
-    data_uri, caption_parts = None, []
-    if isinstance(content, list):
-        for block in content:
-            if not isinstance(block, dict):
-                continue
-            if block.get('type') == 'image_url':
-                data_uri = (block.get('image_url') or {}).get('url')
-            elif block.get('type') == 'text' and block.get('text'):
-                caption_parts.append(block['text'])
-    elif isinstance(content, str):
-        # Fallback in case the image comes back inlined as a data: URI
-        # within plain text rather than a structured content block.
-        match = re.search(r'data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+', content)
-        if match:
-            data_uri = match.group(0)
-            caption_parts.append(content[:match.start()].strip())
-        else:
-            caption_parts.append(content)
-
-    if not data_uri:
-        # Last resort: some APIs return generated images under a top-level
-        # 'images' field (on the message or the response) instead of inside
-        # content — check common shapes before giving up.
-        for images_field in (message.get('images'), data.get('images')):
-            if isinstance(images_field, list) and images_field and isinstance(images_field[0], dict):
-                first = images_field[0]
-                data_uri = (
-                    (first.get('image_url') or {}).get('url')
-                    or first.get('url')
-                    or (f"data:image/png;base64,{first['b64_json']}" if first.get('b64_json') else None)
-                )
-                if data_uri:
-                    break
-
-    if not data_uri:
-        logger.warning("Gemini image generation: no image found in response: %s", resp.text[:500])
-        return None, '', 'The model responded without producing an image — try rephrasing the request.'
-    return data_uri, ' '.join(caption_parts).strip(), None
-
-
 def _is_transient_error(exc):
     """Retry only overloads, rate limits, timeouts and connection failures."""
     status = getattr(exc, 'status_code', None)
@@ -1250,19 +1092,7 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
     cfg = MODELS.get(model_key) or MODELS[DEFAULT_MODEL_KEY]
     identity_key = identity_model_key or model_key
     identity_cfg = MODELS.get(identity_key) or cfg
-    if cfg.get('provider') == 'gemini' and not settings.GEMINI_API_KEY:
-        # Building the OpenAI client with an empty api_key raises inside the
-        # SDK itself, before the retry loop below ever runs — which used to
-        # surface as the same generic "did not respond" text as every other
-        # failure. Catching it here instead gives whoever's testing this an
-        # actual reason, since the fix is "set an env var," not "try again."
-        yield (
-            "Gemini isn't configured on this server yet — GEMINI_API_KEY "
-            "needs to be set as an environment variable before this model "
-            "can respond."
-        )
-        return
-    client = _client_for(cfg)
+    client = _get_client()
     current_content = messages[-1].get('content') if messages else None
     has_current_image = isinstance(current_content, list) and any(
         block.get('type') == 'image_url' for block in current_content
@@ -1548,11 +1378,9 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
         max_tokens=max_tokens or MAX_TOKENS,
         stream=True,
     )
-    if cfg['reasoning'] and cfg.get('provider', 'nvidia') == 'nvidia':
+    if cfg['reasoning']:
         # Disabled so replies on a public page stay fast and cheap instead of
         # spending tokens (and screen space) on a hidden reasoning trace.
-        # This exact payload shape is a Nemotron/NVIDIA template kwarg — it
-        # would not mean anything to a different provider's endpoint.
         kwargs['extra_body'] = {'chat_template_kwargs': {'enable_thinking': False, 'force_nonempty_content': True}}
 
     # Transient failures (a busy worker, a dropped connection, a momentary

@@ -166,19 +166,6 @@ TWO_FACTOR_API_KEY = '12feb4c9-9636-11f1-9cb1-0200cd936042'
 # needs to change.
 NVIDIA_API_KEY = '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'
 
-# Powers the "Gemini 3.6 Flash" entry in the /AI/ model picker
-# (myapp/ai_chat.py, MODELS['gemini']), via Google's OpenAI-compatible
-# endpoint. Unlike NVIDIA_API_KEY/TAVILY_API_KEY above, this is NOT
-# hardcoded — GitHub's push protection rejects it (the key in use here was
-# identified as a "GCP API Key Bound to a Service Account", a broader-scoped
-# credential type than a plain API key, not just a leftover style choice).
-# Set the GEMINI_API_KEY environment variable (same pattern as
-# GITHUB_OAUTH_CLIENT_ID/SECRET below) — on Railway, add it in the service's
-# Variables tab; locally, set it in your shell before running the server.
-# Left unset, that one model just fails per-request with an auth error —
-# nothing else breaks.
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-
 # Powers EduTrellis Light's web-search fallback (myapp/web_search.py) when
 # the saved knowledge base has nothing relevant — same hardcoding choice and
 # same caveat as NVIDIA_API_KEY above. Rotate at app.tavily.com if needed.
