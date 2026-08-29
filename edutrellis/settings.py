@@ -166,6 +166,13 @@ TWO_FACTOR_API_KEY = '12feb4c9-9636-11f1-9cb1-0200cd936042'
 # needs to change.
 NVIDIA_API_KEY = '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'
 
+# Powers the "Gemini 2.5 Flash" entry in the /AI/ model picker
+# (myapp/ai_chat.py, MODELS['gemini']), via Google's OpenAI-compatible
+# endpoint — same hardcoding choice/caveat as NVIDIA_API_KEY above. Get a
+# key at aistudio.google.com/apikey and paste it here (left empty, that
+# model just fails per-request with an auth error — nothing else breaks).
+GEMINI_API_KEY = ''
+
 # Powers EduTrellis Light's web-search fallback (myapp/web_search.py) when
 # the saved knowledge base has nothing relevant — same hardcoding choice and
 # same caveat as NVIDIA_API_KEY above. Rotate at app.tavily.com if needed.

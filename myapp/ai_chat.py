@@ -441,6 +441,23 @@ MODELS = {
         'reasoning': False,
         'vision': True,
     },
+    # Google's Gemini, via its official OpenAI-compatible endpoint (see
+    # _get_gemini_client) rather than NVIDIA's — the only entry here with
+    # 'provider': 'gemini'. Uses settings.GEMINI_API_KEY, a separate key
+    # from NVIDIA_API_KEY. 'reasoning': False because the NVIDIA-specific
+    # chat_template_kwargs thinking-suppression payload doesn't apply to
+    # Gemini; if a "thinking" preamble is ever seen leaking into replies,
+    # Gemini 2.5 models support suppressing it a different way
+    # (extra_body={'google': {'thinking_config': {'thinking_budget': 0}}}) —
+    # not added here since it hasn't been needed/tested yet.
+    'gemini': {
+        'id': 'gemini-2.5-flash',
+        'label': 'Gemini 2.5 Flash',
+        'description': "Google's Gemini — fast, strong general reasoning, writing, and coding.",
+        'reasoning': False,
+        'vision': False,
+        'provider': 'gemini',
+    },
 }
 DEFAULT_MODEL_KEY = CHATGPT_56_MODEL_KEY
 
@@ -966,6 +983,28 @@ def _get_client():
     return _client
 
 
+_gemini_client = None
+
+
+def _get_gemini_client():
+    """Google's Gemini has an official OpenAI-compatible endpoint, so this
+    reuses the same openai SDK — just a different base_url/key — rather than
+    adding a whole second HTTP client dependency for one model."""
+    global _gemini_client
+    if _gemini_client is None:
+        _gemini_client = OpenAI(
+            base_url='https://generativelanguage.googleapis.com/v1beta/openai/',
+            api_key=settings.GEMINI_API_KEY,
+            timeout=25.0,
+            max_retries=0,
+        )
+    return _gemini_client
+
+
+def _client_for(cfg):
+    return _get_gemini_client() if cfg.get('provider') == 'gemini' else _get_client()
+
+
 def _is_transient_error(exc):
     """Retry only overloads, rate limits, timeouts and connection failures."""
     status = getattr(exc, 'status_code', None)
@@ -1092,7 +1131,7 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
     cfg = MODELS.get(model_key) or MODELS[DEFAULT_MODEL_KEY]
     identity_key = identity_model_key or model_key
     identity_cfg = MODELS.get(identity_key) or cfg
-    client = _get_client()
+    client = _client_for(cfg)
     current_content = messages[-1].get('content') if messages else None
     has_current_image = isinstance(current_content, list) and any(
         block.get('type') == 'image_url' for block in current_content
@@ -1378,9 +1417,11 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
         max_tokens=max_tokens or MAX_TOKENS,
         stream=True,
     )
-    if cfg['reasoning']:
+    if cfg['reasoning'] and cfg.get('provider', 'nvidia') == 'nvidia':
         # Disabled so replies on a public page stay fast and cheap instead of
         # spending tokens (and screen space) on a hidden reasoning trace.
+        # This exact payload shape is a Nemotron/NVIDIA template kwarg — it
+        # would not mean anything to a different provider's endpoint.
         kwargs['extra_body'] = {'chat_template_kwargs': {'enable_thinking': False, 'force_nonempty_content': True}}
 
     # Transient failures (a busy worker, a dropped connection, a momentary
