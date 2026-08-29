@@ -2715,7 +2715,17 @@ def ai_chat_send(request):
     # whatever the user had selected, this specific turn is auto-routed
     # there. Otherwise use their chosen model, falling back to the default
     # for anything unrecognized (stale client, tampered value, etc.).
-    if image_data:
+    #
+    # Gemini is the one deliberate exception to all of this: every message
+    # sent while it's selected goes straight to Gemini itself — never
+    # rerouted to the vision or code worker for an image or a coding-mode
+    # document — since it's natively multimodal/capable enough to handle
+    # those directly, unlike the smaller NVIDIA workers this routing was
+    # originally built around.
+    if selected_model_key == 'gemini':
+        model_key = 'gemini'
+        request_category = 'coding' if document_mode == 'coding' else request_router.classify(message)
+    elif image_data:
         model_key = 'vision'
     elif document_mode == 'coding':
         # "Start coding" is an explicit mode choice, so use the code-tuned

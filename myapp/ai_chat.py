@@ -459,7 +459,15 @@ MODELS = {
         'label': 'Gemini 3.6 Flash',
         'description': "Google's Gemini — fast, strong general reasoning, writing, and coding.",
         'reasoning': False,
-        'vision': False,
+        # True (unlike every other non-dedicated-vision entry above) — when
+        # Gemini is the selected model, views.ai_chat_send keeps model_key
+        # as 'gemini' instead of overriding it to 'vision'/'code' for an
+        # image or a coding-mode document, since Gemini handles both
+        # natively. This flag is what makes the image content block
+        # actually get attached to the API call in that case (see the
+        # clean_history loop in views.py) — without it, the image would
+        # silently never reach the model at all.
+        'vision': True,
         'provider': 'gemini',
     },
 }
