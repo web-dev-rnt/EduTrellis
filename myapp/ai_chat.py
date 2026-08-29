@@ -444,15 +444,19 @@ MODELS = {
     # Google's Gemini, via its official OpenAI-compatible endpoint (see
     # _get_gemini_client) rather than NVIDIA's — the only entry here with
     # 'provider': 'gemini'. Uses settings.GEMINI_API_KEY, a separate key
-    # from NVIDIA_API_KEY. 'reasoning': False because the NVIDIA-specific
-    # chat_template_kwargs thinking-suppression payload doesn't apply to
-    # Gemini; if a "thinking" preamble is ever seen leaking into replies,
-    # Gemini 2.5 models support suppressing it a different way
-    # (extra_body={'google': {'thinking_config': {'thinking_budget': 0}}}) —
-    # not added here since it hasn't been needed/tested yet.
+    # from NVIDIA_API_KEY. Live-verified against the real API on 2026-08-29:
+    # 'gemini-2.5-flash' 404s for this key with "no longer available to new
+    # users... use models/gemini-3.6-flash" — Google has moved the
+    # generation on since, so this points at the newer one instead.
+    # 'reasoning': False because the NVIDIA-specific chat_template_kwargs
+    # thinking-suppression payload doesn't apply to Gemini; if a "thinking"
+    # preamble is ever seen leaking into replies, Gemini's newer models
+    # support suppressing it a different way (extra_body={'google':
+    # {'thinking_config': {'thinking_budget': 0}}}) — not added here since
+    # it hasn't been needed/tested yet.
     'gemini': {
-        'id': 'gemini-2.5-flash',
-        'label': 'Gemini 2.5 Flash',
+        'id': 'gemini-3.6-flash',
+        'label': 'Gemini 3.6 Flash',
         'description': "Google's Gemini — fast, strong general reasoning, writing, and coding.",
         'reasoning': False,
         'vision': False,
