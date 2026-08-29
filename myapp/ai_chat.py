@@ -1478,9 +1478,12 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
 # (NVIDIA's OpenAI-compatible endpoint doesn't have verified tool-calling
 # support for these models) — phase 1 picks which existing files are worth
 # reading, phase 2 turns the instruction + those files' content into a
-# concrete list of file operations. The caller (views.ai_github_send) is
-# responsible for actually applying each operation via github_ops and for
-# enforcing the blocked-path list — this module only ever proposes JSON.
+# concrete list of file operations. This module only ever proposes JSON; the
+# caller (views.ai_github_send) applies each operation via github_ops,
+# enforces the blocked-path list on both the read and write side, and pushes
+# the result to a new branch + pull request rather than the default branch
+# directly, since a small non-specialized model's proposal has no business
+# landing on main unreviewed.
 GITHUB_MODEL_KEY = 'code'
 GITHUB_FILE_LIST_CAP = 4000  # paths sent to the model per call
 GITHUB_SELECT_FILE_CAP = 8   # files the model may ask to read per request
@@ -1543,8 +1546,11 @@ def github_plan_changes(prompt, file_paths, file_contents):
     surface that as a chat reply."""
     client = _get_client()
     system = (
-        "You are a senior software engineer making a direct commit to a Git "
-        "repository on the user's instruction. Reply with ONLY a JSON object "
+        "You are a senior software engineer proposing a change to a Git "
+        "repository on the user's instruction. Your proposal will be pushed "
+        "to a new branch and opened as a pull request for human review — "
+        "never claim in 'summary' that the change is already live, merged, "
+        "or deployed. Reply with ONLY a JSON object "
         "(no markdown fences, no other text) of exactly this shape:\n"
         '{"summary": "one or two sentences describing the change, for the '
         'user", "commit_message": "a short git commit message", '

@@ -3609,6 +3609,12 @@ def ai_github_send(request):
     wanted = ai_chat.github_select_files(message, file_paths)
     file_contents, file_shas = {}, {}
     for path in wanted:
+        if github_ops.is_path_blocked(path):
+            # The blocked list protects settings/migrations/secrets/etc from
+            # writes below — it must cover reads too, or a blocked file's
+            # contents (e.g. settings.py) would still get pasted into the
+            # planning prompt even though it can never actually be changed.
+            continue
         try:
             content, sha = github_ops.get_file(conn.access_token, owner, repo, path, branch)
         except github_ops.GitHubAPIError:
@@ -3631,7 +3637,10 @@ def ai_github_send(request):
     commit_message = str(plan.get('commit_message') or message)[:200] or message[:200]
     operations = plan.get('operations') or []
 
-    applied, skipped = [], []
+    # Validate every proposed operation before touching the GitHub API at
+    # all, so we know whether there's anything real to commit BEFORE
+    # creating a working branch for it (never open an empty branch/PR).
+    valid_ops, skipped = [], []
     for op in operations[:20]:
         if not isinstance(op, dict):
             continue
@@ -3640,41 +3649,84 @@ def ai_github_send(request):
         if not path or github_ops.is_path_blocked(path):
             skipped.append(f"{path or '(blank path)'} — blocked")
             continue
+        if action in ('update', 'create'):
+            content = op.get('content')
+            if not isinstance(content, str):
+                skipped.append(f"{path} — no content given")
+                continue
+            valid_ops.append({'action': action, 'path': path, 'content': content})
+        elif action == 'delete':
+            valid_ops.append({'action': 'delete', 'path': path})
+        else:
+            skipped.append(f"{path} — unknown action '{action}'")
+
+    applied, pr_url, work_branch = [], None, None
+    if valid_ops:
+        # Every change lands on a fresh branch + PR rather than a direct
+        # commit to the default branch — an AI-proposed change (from a
+        # small, non-specialized model, on a plain-English instruction) has
+        # no business landing on main unreviewed. If nothing ends up
+        # actually applied below, the branch is deleted again so this
+        # doesn't litter the repo with empty branches.
+        work_branch = f"ai/{timezone.now():%Y%m%d-%H%M%S}-{secrets.token_hex(3)}"
         try:
-            if action in ('update', 'create'):
-                content = op.get('content')
-                if not isinstance(content, str):
-                    skipped.append(f"{path} — no content given")
-                    continue
-                sha = file_shas.get(path)
-                if sha is None and action == 'update':
-                    try:
-                        _, sha = github_ops.get_file(conn.access_token, owner, repo, path, branch)
-                    except github_ops.GitHubAPIError:
-                        sha = None
-                github_ops.upsert_file(conn.access_token, owner, repo, path, content, commit_message, branch, sha=sha)
-                applied.append(path)
-            elif action == 'delete':
-                sha = file_shas.get(path)
-                if sha is None:
-                    try:
-                        _, sha = github_ops.get_file(conn.access_token, owner, repo, path, branch)
-                    except github_ops.GitHubAPIError:
-                        sha = None
-                if sha is None:
-                    skipped.append(f"{path} — not found")
-                    continue
-                github_ops.delete_file(conn.access_token, owner, repo, path, commit_message, branch, sha)
-                applied.append(path)
-            else:
-                skipped.append(f"{path} — unknown action '{action}'")
+            base_sha = github_ops.get_branch_sha(conn.access_token, owner, repo, branch)
+            github_ops.create_branch(conn.access_token, owner, repo, work_branch, base_sha)
         except github_ops.GitHubAPIError as e:
-            skipped.append(f"{path} — {e}")
+            return finish(f"Couldn't create a working branch for this change: {e}")
+
+        for op in valid_ops:
+            path = op['path']
+            try:
+                if op['action'] in ('update', 'create'):
+                    sha = file_shas.get(path)
+                    if sha is None and op['action'] == 'update':
+                        try:
+                            _, sha = github_ops.get_file(conn.access_token, owner, repo, path, work_branch)
+                        except github_ops.GitHubAPIError:
+                            sha = None
+                    github_ops.upsert_file(
+                        conn.access_token, owner, repo, path, op['content'], commit_message, work_branch, sha=sha,
+                    )
+                    applied.append(path)
+                else:
+                    sha = file_shas.get(path)
+                    if sha is None:
+                        try:
+                            _, sha = github_ops.get_file(conn.access_token, owner, repo, path, work_branch)
+                        except github_ops.GitHubAPIError:
+                            sha = None
+                    if sha is None:
+                        skipped.append(f"{path} — not found")
+                        continue
+                    github_ops.delete_file(conn.access_token, owner, repo, path, commit_message, work_branch, sha)
+                    applied.append(path)
+            except github_ops.GitHubAPIError as e:
+                skipped.append(f"{path} — {e}")
+
+        if applied:
+            try:
+                pr = github_ops.create_pull_request(
+                    conn.access_token, owner, repo, title=commit_message,
+                    head=work_branch, base=branch, body=summary,
+                )
+                pr_url = pr.get('html_url')
+            except github_ops.GitHubAPIError as e:
+                skipped.append(f"(pull request could not be opened automatically: {e})")
+        else:
+            github_ops.delete_branch(conn.access_token, owner, repo, work_branch)
 
     lines = [summary]
     if applied:
-        lines.append(f"\n**Pushed to {conn.repo_full_name}@{branch}:**")
+        lines.append(f"\n**Proposed on `{work_branch}` — not yet merged:**")
         lines.extend(f"- {p}" for p in applied)
+        if pr_url:
+            lines.append(f"\nReview and merge: {pr_url}")
+        else:
+            lines.append(
+                f"\nPushed to `{work_branch}` in {conn.repo_full_name}, but opening a pull "
+                "request automatically failed — you can open one manually from that branch."
+            )
     if skipped:
         lines.append("\n**Skipped:**")
         lines.extend(f"- {s}" for s in skipped)
