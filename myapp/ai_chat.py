@@ -1135,6 +1135,18 @@ def stream_chat(messages, model_key=DEFAULT_MODEL_KEY, identity_model_key=None,
     cfg = MODELS.get(model_key) or MODELS[DEFAULT_MODEL_KEY]
     identity_key = identity_model_key or model_key
     identity_cfg = MODELS.get(identity_key) or cfg
+    if cfg.get('provider') == 'gemini' and not settings.GEMINI_API_KEY:
+        # Building the OpenAI client with an empty api_key raises inside the
+        # SDK itself, before the retry loop below ever runs — which used to
+        # surface as the same generic "did not respond" text as every other
+        # failure. Catching it here instead gives whoever's testing this an
+        # actual reason, since the fix is "set an env var," not "try again."
+        yield (
+            "Gemini isn't configured on this server yet — GEMINI_API_KEY "
+            "needs to be set as an environment variable before this model "
+            "can respond."
+        )
+        return
     client = _client_for(cfg)
     current_content = messages[-1].get('content') if messages else None
     has_current_image = isinstance(current_content, list) and any(
