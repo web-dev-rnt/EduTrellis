@@ -1975,6 +1975,12 @@ AI_CONVERSATION_TITLE_CHARS = 60
 AI_CURRENT_CONVERSATION_SESSION_KEY = 'ai_current_conversation_id'
 AI_GUEST_MESSAGE_LIMIT = 6        # free messages before a guest must log in/sign up
 AI_FREE_MESSAGE_LIMIT = 20        # free messages for a logged-in, non-staff, unsubscribed account before EduTrellis AI requires the paid plan
+# Guests and free (unsubscribed, non-staff) accounts only get the cheap
+# models — ChatGPT 5.6/Ultra/Nemotron Super stay staff-only while Premium
+# is being wound down (see _ai_migrated_block), so there's no tier left to
+# reserve them for.
+AI_FREE_TIER_MODEL_KEYS = ('quick', 'light', 'code')
+AI_FREE_TIER_DEFAULT_MODEL_KEY = 'quick'
 # ~1.5MB of raw image data as a base64 data: URI (~2M chars) — well under
 # Django's default 2.5MB DATA_UPLOAD_MAX_MEMORY_SIZE for the whole request
 # body, so an oversized image gets our own clean error instead of Django's
@@ -2143,12 +2149,6 @@ def ai_page(request):
         resume_conversation_id = conversations[0]['id'] if conversations else None
     if resume_conversation_id:
         request.session[AI_CURRENT_CONVERSATION_SESSION_KEY] = resume_conversation_id
-    models = [
-        {'key': key, 'label': cfg['label'], 'description': cfg['description']}
-        for key, cfg in ai_chat.MODELS.items() if key != 'vision'
-    ]
-    model_labels = {key: cfg['label'] for key, cfg in ai_chat.MODELS.items()}
-
     ai_is_staff = bool(request.user.is_authenticated and request.user.is_staff)
     ai_subscribed = False
     ai_free_used = 0
@@ -2156,6 +2156,18 @@ def ai_page(request):
         profile, _ = StoreProfile.objects.get_or_create(user=request.user)
         ai_subscribed = profile.is_ai_subscribed
         ai_free_used = profile.ai_free_messages_used
+
+    # Premium is fully blocked elsewhere (_ai_migrated_block); everyone left
+    # who isn't staff — guests and free logged-in accounts alike — is the
+    # free tier, restricted to the cheap models only.
+    ai_free_tier = not ai_is_staff and not ai_subscribed
+    models = [
+        {'key': key, 'label': cfg['label'], 'description': cfg['description']}
+        for key, cfg in ai_chat.MODELS.items()
+        if key != 'vision' and (not ai_free_tier or key in AI_FREE_TIER_MODEL_KEYS)
+    ]
+    model_labels = {key: cfg['label'] for key, cfg in ai_chat.MODELS.items()}
+    default_model_key = AI_FREE_TIER_DEFAULT_MODEL_KEY if ai_free_tier else ai_chat.DEFAULT_MODEL_KEY
 
     return render(request, 'ai.html', {
         'ai_authenticated': request.user.is_authenticated,
@@ -2174,8 +2186,8 @@ def ai_page(request):
         'ai_free_used': ai_free_used,
         'ai_purchase_url': _ai_purchase_url(),
         'ai_models': models,
-        'ai_default_model': ai_chat.DEFAULT_MODEL_KEY,
-        'ai_default_model_label': model_labels[ai_chat.DEFAULT_MODEL_KEY],
+        'ai_default_model': default_model_key,
+        'ai_default_model_label': model_labels[default_model_key],
         'ai_model_labels': model_labels,
         'ai_github_oauth_available': bool(settings.GITHUB_OAUTH_CLIENT_ID),
     })
@@ -2268,6 +2280,20 @@ def _ai_migrated_block(user):
         ),
         'redirect_url': AI_VIDHYORA_URL,
     }
+
+
+def _ai_is_free_tier(user):
+    """True for guests and free (unsubscribed, non-staff) accounts — the
+    tier restricted to AI_FREE_TIER_MODEL_KEYS (Quick/Light/Code only).
+    False for staff. Premium accounts never reach this check in practice —
+    _ai_migrated_block already rejects them before model selection runs —
+    but would also read False here since they're still subscribed."""
+    if not user.is_authenticated:
+        return True
+    if user.is_staff:
+        return False
+    profile, _ = StoreProfile.objects.get_or_create(user=user)
+    return not profile.is_ai_subscribed
 
 
 def _ai_note_heading(text):
@@ -2737,6 +2763,11 @@ def ai_chat_send(request):
         if requested_model_key in ai_chat.MODELS
         else ai_chat.DEFAULT_MODEL_KEY
     )
+    # Quick/Light/Code only for guests and free accounts — a tampered/stale
+    # client payload asking for ChatGPT 5.6/Ultra/Nemotron Super gets
+    # silently downgraded rather than erroring the whole message out.
+    if selected_model_key not in AI_FREE_TIER_MODEL_KEYS and _ai_is_free_tier(request.user):
+        selected_model_key = AI_FREE_TIER_DEFAULT_MODEL_KEY
     chatgpt_mode = selected_model_key == ai_chat.CHATGPT_56_MODEL_KEY
     response_model_key = ai_chat.CHATGPT_56_MODEL_KEY if chatgpt_mode else None
 
