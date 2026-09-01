@@ -122,6 +122,12 @@ header{background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px s
 .feature-modal-item-label{display:block;font-size:.84rem;font-weight:700;color:var(--head)}
 .feature-modal-item-desc{display:block;font-size:.75rem;color:var(--text);line-height:1.4;margin-top:.1rem}
 .feature-modal-btn{width:100%;border:none;background:linear-gradient(135deg,var(--red),var(--red-dark));color:#fff;font-weight:700;font-size:.85rem;padding:.6rem;border-radius:10px;cursor:pointer}
+#migrationModalBackdrop{z-index:50}
+.migration-modal{z-index:51}
+.migration-modal-body{font-size:.84rem;color:var(--text);line-height:1.5;margin:0 0 1rem}
+.migration-modal-btn{display:block;text-align:center;text-decoration:none;box-sizing:border-box}
+.migration-modal-later{width:100%;border:none;background:none;color:#9aa3b0;font-size:.78rem;font-weight:600;padding:.55rem;cursor:pointer;margin-top:.15rem}
+.migration-modal-later:hover{color:var(--text)}
 @media (max-width:480px){
   .install-banner{padding:.5rem .7rem;font-size:.76rem}
   .install-banner-text{font-size:.76rem}
@@ -584,6 +590,17 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   </div>
   <button type="button" class="feature-modal-btn" id="featureModalGotIt">Got it</button>
 </div>
+
+{% if ai_authenticated %}
+<div class="feature-modal-backdrop" id="migrationModalBackdrop" hidden></div>
+<div class="feature-modal migration-modal" id="migrationModal" hidden role="dialog" aria-modal="true" aria-label="We've moved to Vidhyora AI">
+  <button type="button" class="feature-modal-close" id="migrationModalClose" aria-label="Dismiss"><i class="fas fa-xmark"></i></button>
+  <p class="feature-modal-title">Hello, Premium User! 👋</p>
+  <p class="migration-modal-body">We've shifted and updated this AI. All your data has been transferred, plus more models, bug fixes, and updates. Click below to open Vidhyora — our new, updated AI.</p>
+  <a href="https://www.vidhyora.online/" class="feature-modal-btn migration-modal-btn" id="migrationModalOpen">Open Vidhyora AI</a>
+  <button type="button" class="migration-modal-later" id="migrationModalLater">Maybe later</button>
+</div>
+{% endif %}
 
 <div class="body-row">
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -1896,6 +1913,26 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     setTimeout(function(){ modal.hidden = false; backdrop.hidden = false; }, 2000);
     if (closeBtn) closeBtn.addEventListener('click', dismiss);
     if (gotItBtn) gotItBtn.addEventListener('click', dismiss);
+    backdrop.addEventListener('click', dismiss);
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && !modal.hidden) dismiss();
+    });
+  })();
+
+  // ---- migration notice: we've moved to Vidhyora AI ----
+  (function setupMigrationModal(){
+    var backdrop = document.getElementById('migrationModalBackdrop');
+    var modal = document.getElementById('migrationModal');
+    var closeBtn = document.getElementById('migrationModalClose');
+    var laterBtn = document.getElementById('migrationModalLater');
+    if (!modal || !backdrop || !AI_AUTHENTICATED) return;
+    function dismiss(){
+      modal.hidden = true;
+      backdrop.hidden = true;
+    }
+    setTimeout(function(){ modal.hidden = false; backdrop.hidden = false; }, 600);
+    if (closeBtn) closeBtn.addEventListener('click', dismiss);
+    if (laterBtn) laterBtn.addEventListener('click', dismiss);
     backdrop.addEventListener('click', dismiss);
     document.addEventListener('keydown', function(e){
       if (e.key === 'Escape' && !modal.hidden) dismiss();
