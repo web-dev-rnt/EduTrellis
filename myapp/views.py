@@ -2245,6 +2245,31 @@ def _ai_profile_gate(user, ip=None):
     return None
 
 
+AI_VIDHYORA_URL = 'https://www.vidhyora.online/'
+
+
+def _ai_migrated_block(user):
+    """Returns the 403 JSON payload if `user` is a paying EduTrellis AI
+    subscriber — EduTrellis AI is closing for Premium accounts, who are
+    being moved to Vidhyora. Staff are exempt so admins keep full access.
+    Non-premium accounts (free/guest) are unaffected and keep using this
+    AI as-is."""
+    if not user.is_authenticated or user.is_staff:
+        return None
+    profile, _ = StoreProfile.objects.get_or_create(user=user)
+    if not profile.is_ai_subscribed:
+        return None
+    return {
+        'status': 'migrated',
+        'detail': (
+            "EduTrellis AI is now closed for Premium accounts — we've shifted and "
+            "updated this AI. Open Vidhyora to keep chatting; all your data has "
+            "been transferred, plus more models, bug fixes, and updates."
+        ),
+        'redirect_url': AI_VIDHYORA_URL,
+    }
+
+
 def _ai_note_heading(text):
     """First line of the noted text, trimmed to a short heading — same idea
     as AIConversation's title-from-first-message, just capped shorter since
@@ -2617,6 +2642,10 @@ def ai_chat_send(request):
     request_started = time.perf_counter()
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'detail': 'Invalid request method.'}, status=405)
+
+    migrated = _ai_migrated_block(request.user)
+    if migrated:
+        return JsonResponse(migrated, status=403)
 
     # A real, billable API key sits behind this — a basic per-IP rate limit
     # is the brake against an account (or a guest, or a script cycling
@@ -3566,6 +3595,10 @@ def ai_github_send(request):
         return _github_forbidden()
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'detail': 'Invalid request method.'}, status=405)
+
+    migrated = _ai_migrated_block(request.user)
+    if migrated:
+        return JsonResponse(migrated, status=403)
 
     cache_key = f'ai_github_rate:{request.user.pk}'
     count = cache.get(cache_key, 0)

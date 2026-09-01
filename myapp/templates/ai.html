@@ -126,8 +126,6 @@ header{background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px s
 .migration-modal{z-index:51}
 .migration-modal-body{font-size:.84rem;color:var(--text);line-height:1.5;margin:0 0 1rem}
 .migration-modal-btn{display:block;text-align:center;text-decoration:none;box-sizing:border-box}
-.migration-modal-later{width:100%;border:none;background:none;color:#9aa3b0;font-size:.78rem;font-weight:600;padding:.55rem;cursor:pointer;margin-top:.15rem}
-.migration-modal-later:hover{color:var(--text)}
 @media (max-width:480px){
   .install-banner{padding:.5rem .7rem;font-size:.76rem}
   .install-banner-text{font-size:.76rem}
@@ -591,14 +589,12 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
   <button type="button" class="feature-modal-btn" id="featureModalGotIt">Got it</button>
 </div>
 
-{% if ai_authenticated %}
+{% if ai_subscribed %}
 <div class="feature-modal-backdrop" id="migrationModalBackdrop" hidden></div>
-<div class="feature-modal migration-modal" id="migrationModal" hidden role="dialog" aria-modal="true" aria-label="We've moved to Vidhyora AI">
-  <button type="button" class="feature-modal-close" id="migrationModalClose" aria-label="Dismiss"><i class="fas fa-xmark"></i></button>
+<div class="feature-modal migration-modal" id="migrationModal" hidden role="dialog" aria-modal="true" aria-label="EduTrellis AI has closed for Premium accounts">
   <p class="feature-modal-title">Hello, Premium User! 👋</p>
-  <p class="migration-modal-body">We've shifted and updated this AI. All your data has been transferred, plus more models, bug fixes, and updates. Click below to open Vidhyora — our new, updated AI.</p>
+  <p class="migration-modal-body">EduTrellis AI is now closed for Premium accounts — we've shifted and updated this AI. Open Vidhyora below to keep chatting: all your data has been transferred, plus more models, bug fixes, and updates.</p>
   <a href="https://www.vidhyora.online/" class="feature-modal-btn migration-modal-btn" id="migrationModalOpen">Open Vidhyora AI</a>
-  <button type="button" class="migration-modal-later" id="migrationModalLater">Maybe later</button>
 </div>
 {% endif %}
 
@@ -1919,24 +1915,19 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
     });
   })();
 
-  // ---- migration notice: we've moved to Vidhyora AI ----
+  // ---- migration notice: EduTrellis AI has closed for Premium accounts ----
+  // Deliberately has no close/dismiss path (no X, no backdrop click, no
+  // Escape) — Premium accounts are meant to be fully blocked from this AI
+  // and pointed at Vidhyora instead. The real access block is enforced
+  // server-side in ai_chat_send/ai_github_send (_ai_migrated_block); this
+  // is just the matching UI so a blocked user isn't left staring at a
+  // composer that silently rejects every message.
   (function setupMigrationModal(){
     var backdrop = document.getElementById('migrationModalBackdrop');
     var modal = document.getElementById('migrationModal');
-    var closeBtn = document.getElementById('migrationModalClose');
-    var laterBtn = document.getElementById('migrationModalLater');
-    if (!modal || !backdrop || !AI_AUTHENTICATED) return;
-    function dismiss(){
-      modal.hidden = true;
-      backdrop.hidden = true;
-    }
-    setTimeout(function(){ modal.hidden = false; backdrop.hidden = false; }, 600);
-    if (closeBtn) closeBtn.addEventListener('click', dismiss);
-    if (laterBtn) laterBtn.addEventListener('click', dismiss);
-    backdrop.addEventListener('click', dismiss);
-    document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape' && !modal.hidden) dismiss();
-    });
+    if (!modal || !backdrop) return;
+    modal.hidden = false;
+    backdrop.hidden = false;
   })();
 
   // ---- install as an app ----
@@ -2983,6 +2974,13 @@ footer{flex:none;border-top:1px solid var(--line);background:var(--surface);padd
             if (userRow) userRow.remove();
             setStreaming(false);
             showPurchaseGate(body.detail);
+            return null;
+          }
+          if (body.status === 'migrated') {
+            // Premium accounts are blocked server-side too (not just the
+            // modal) — this only fires if a Premium session somehow reached
+            // the composer without seeing it (e.g. subscribed mid-session).
+            window.location.href = body.redirect_url || 'https://www.vidhyora.online/';
             return null;
           }
           throw new Error(body.detail || 'Something went wrong — please try again.');
