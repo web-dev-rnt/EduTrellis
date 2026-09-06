@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /welcomernt/
+Disallow: /store/dashboard/
+Disallow: /store/api/
+Disallow: /AI/api/
 
 Sitemap: https://www.edutrellis.in/sitemap.xml

@@ -5,8 +5,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<title>{% if meta_title %}{{ meta_title }}{% else %}EduTrellis Store — Buy Earbuds, Smartwatches, Keyboards &amp; Tech Gadgets Online{% endif %}</title>
-<meta name="description" content="{% if meta_description %}{{ meta_description }}{% else %}Official gadget store of EduTrellis, Lucknow. Shop earbuds, headphones, smartwatches, keyboards, power banks, chargers and smart home devices with warranty and fast delivery across India.{% endif %}">
+<title>{% if meta_title %}{{ meta_title }}{% elif site_customization.share_title %}{{ site_customization.share_title }}{% else %}EduTrellis Store — Buy Earbuds, Smartwatches, Keyboards &amp; Tech Gadgets Online{% endif %}</title>
+<meta name="description" content="{% if meta_description %}{{ meta_description }}{% elif site_customization.share_description %}{{ site_customization.share_description }}{% else %}Official gadget store of EduTrellis, Lucknow. Shop earbuds, headphones, smartwatches, keyboards, power banks, chargers and smart home devices with warranty and fast delivery across India.{% endif %}">
 <meta name="keywords" content="buy earbuds online India, smartwatch store, mechanical keyboard India, power bank online, tech gadgets store Lucknow, EduTrellis store">
 <meta name="author" content="EduTrellis">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -14,21 +14,21 @@
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="EduTrellis">
-<meta property="og:title" content="{% if meta_title %}{{ meta_title }}{% else %}EduTrellis Store — Tech Gadgets, Delivered Fast{% endif %}">
-<meta property="og:description" content="{% if meta_description %}{{ meta_description }}{% else %}An EduTrellis company store. Audio, wearables, accessories and smart home gadgets with warranty and easy returns.{% endif %}">
+<meta property="og:title" content="{% if meta_title %}{{ meta_title }}{% elif site_customization.share_title %}{{ site_customization.share_title }}{% else %}EduTrellis Store — Tech Gadgets, Delivered Fast{% endif %}">
+<meta property="og:description" content="{% if meta_description %}{{ meta_description }}{% elif site_customization.share_description %}{{ site_customization.share_description }}{% else %}An EduTrellis company store. Audio, wearables, accessories and smart home gadgets with warranty and easy returns.{% endif %}">
 <meta property="og:url" content="https://www.edutrellis.in{{ request.path }}">
-<meta property="og:image" content="{% if meta_image %}https://www.edutrellis.in{{ meta_image }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}">
+<meta property="og:image" content="{% if meta_image %}https://www.edutrellis.in{{ meta_image }}{% elif site_customization.share_image %}https://www.edutrellis.in{{ site_customization.share_image.url }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="en_IN">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{% if meta_title %}{{ meta_title }}{% else %}EduTrellis Store — Tech Gadgets, Delivered Fast{% endif %}">
-<meta name="twitter:description" content="{% if meta_description %}{{ meta_description }}{% else %}An EduTrellis company store. Audio, wearables, accessories and smart home gadgets with warranty and easy returns.{% endif %}">
-<meta name="twitter:image" content="{% if meta_image %}https://www.edutrellis.in{{ meta_image }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}">
+<meta name="twitter:title" content="{% if meta_title %}{{ meta_title }}{% elif site_customization.share_title %}{{ site_customization.share_title }}{% else %}EduTrellis Store — Tech Gadgets, Delivered Fast{% endif %}">
+<meta name="twitter:description" content="{% if meta_description %}{{ meta_description }}{% elif site_customization.share_description %}{{ site_customization.share_description }}{% else %}An EduTrellis company store. Audio, wearables, accessories and smart home gadgets with warranty and easy returns.{% endif %}">
+<meta name="twitter:image" content="{% if meta_image %}https://www.edutrellis.in{{ meta_image }}{% elif site_customization.share_image %}https://www.edutrellis.in{{ site_customization.share_image.url }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}">
 
-<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
-<link rel="shortcut icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+<link rel="icon" href="{% if site_customization.favicon %}{{ site_customization.favicon.url }}{% else %}{% static 'favicon.ico' %}{% endif %}">
+<link rel="shortcut icon" href="{% if site_customization.favicon %}{{ site_customization.favicon.url }}{% else %}{% static 'favicon.ico' %}{% endif %}">
 
 {% if pwa.ready %}
 <link rel="manifest" href="{% url 'pwa_manifest' %}">
@@ -221,8 +221,8 @@ header.stuck{box-shadow:0 6px 24px rgba(0,0,0,.08)}
 .hslide-in{position:relative;max-width:1240px;margin:0 auto;padding:3.5rem 1.25rem;width:100%}
 .hbadge{display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px);padding:.4rem 1rem;border-radius:50px;font-size:.78rem;font-weight:700;margin-bottom:1.1rem}
 .hbadge i{color:#ff5f72}
-.hslide h1{font-size:clamp(1.9rem,5.2vw,3.5rem);font-weight:900;color:#fff;line-height:1.1;letter-spacing:-.035em;max-width:16ch}
-.hslide h1 em{font-style:normal;color:#ff5f72}
+.hslide h1,.hslide h2{font-size:clamp(1.9rem,5.2vw,3.5rem);font-weight:900;color:#fff;line-height:1.1;letter-spacing:-.035em;max-width:16ch}
+.hslide h1 em,.hslide h2 em{font-style:normal;color:#ff5f72}
 .hslide p{margin-top:1rem;font-size:clamp(.95rem,1.6vw,1.08rem);color:rgba(255,255,255,.82);max-width:52ch}
 .hero-btns{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.7rem}
 .cta-btn{display:inline-flex;align-items:center;gap:.5rem;text-decoration:none;cursor:pointer;border:none;background:linear-gradient(135deg,var(--red),var(--red-dark));color:#fff;padding:.85rem 1.6rem;border-radius:50px;font-family:'Sora',sans-serif;font-size:.88rem;font-weight:700;box-shadow:0 10px 28px rgba(232,0,30,.36);transition:transform .28s,box-shadow .28s}
@@ -917,7 +917,7 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
       <div class="hslide-mesh"></div>
       <div class="hslide-in">
         <div class="hbadge"><i class="fas fa-headphones"></i> Audio collection</div>
-        <h1>Sound Worth <em>Turning Up</em></h1>
+        <h2>Sound Worth <em>Turning Up</em></h2>
         <p>ANC earbuds, over-ear headphones and party speakers with real battery numbers — not the ones printed on the box.</p>
         <div class="hero-btns">
           <a href="#shop" class="cta-btn" data-jump="audio">Shop audio <i class="fas fa-arrow-right"></i></a>
@@ -935,7 +935,7 @@ footer{background:var(--head);color:rgba(255,255,255,.68);padding:3.5rem 0 0}
       <div class="hslide-mesh"></div>
       <div class="hslide-in">
         <div class="hbadge"><i class="fas fa-bolt"></i> Charging &amp; power</div>
-        <h1>Never Hunt for a <em>Charger</em> Again</h1>
+        <h2>Never Hunt for a <em>Charger</em> Again</h2>
         <p>Fast chargers, GaN adapters, braided cables and power banks that hold their rated capacity after a hundred cycles.</p>
         <div class="hero-btns">
           <a href="#shop" class="cta-btn" data-jump="power">Shop power <i class="fas fa-arrow-right"></i></a>
@@ -2076,7 +2076,7 @@ function reviewListHtml(reviews){
   return reviews.map(r => '' +
     '<div class="review-item">' +
       '<div class="review-item-top"><b>' + escHtml(r.name) + '</b><span class="stars">' + stars(r.rating) + '</span>' +
-        '<span class="review-verified"><i class="fas fa-circle-check"></i> Verified purchase</span>' +
+        '<span class="review-verified"><i class="fas fa-circle-check"></i> ' + (r.shared ? 'Verified AI customer' : 'Verified purchase') + '</span>' +
       '</div>' +
       (r.comment ? '<p>' + escHtml(r.comment) + '</p>' : '') +
       '<span class="review-date">' + r.created_at + '</span>' +

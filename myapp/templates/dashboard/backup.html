@@ -31,7 +31,7 @@
 {% endblock %}
 
 {% block content %}
-<p class="backup-sub">Manually back up your SQLite database to Dropbox, or restore from a previous backup.</p>
+<p class="backup-sub">Back up or restore the SQLite database together with uploaded Customize/PWA images.</p>
 
 {% for message in messages %}
   <div class="flash {{ message.tags }}"><i class="fas {% if message.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}"></i> {{ message }}</div>
@@ -56,6 +56,7 @@
       <ul class="backup-facts">
         <li><i class="fas fa-folder"></i> Saves a timestamped copy to <code>{{ backup_folder }}/</code></li>
         <li><i class="fas fa-file-circle-check"></i> Also refreshes <code>{{ backup_folder }}/db_latest.sqlite3</code></li>
+        <li><i class="fas fa-images"></i> Saves a matching <code>customize_*.zip</code> containing share, favicon and PWA images</li>
         <li><i class="fas fa-shield-halved"></i> Old backups are kept — nothing is deleted automatically</li>
       </ul>
       <form method="post" action="{% url 'dashboard_backup_run' %}">

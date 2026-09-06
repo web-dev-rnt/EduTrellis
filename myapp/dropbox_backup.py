@@ -4,7 +4,9 @@ store owner's Dropbox App Key/Secret + a long-lived OAuth2 refresh token
 `dropbox` package isn't installed or credentials aren't set yet.
 """
 import datetime
+import io
 from pathlib import Path
+import zipfile
 
 from django.conf import settings as dj_settings
 
@@ -16,6 +18,8 @@ except ImportError:  # pragma: no cover - optional dependency until configured
 BACKUP_ROOT = '/EduTrellis Store'
 BACKUP_FOLDER = f'{BACKUP_ROOT}/backups'
 LATEST_NAME = 'db_latest.sqlite3'
+ASSETS_LATEST_NAME = 'customize_latest.zip'
+ASSET_FOLDERS = ('customize', 'pwa')
 
 
 class BackupError(Exception):
@@ -46,9 +50,67 @@ def _ensure_folder(dbx, path):
             raise BackupError(f"Could not create the Dropbox folder '{path}': {exc}")
 
 
+def _customization_archive():
+    """Returns a ZIP containing uploaded customization and PWA images."""
+    media_root = Path(dj_settings.MEDIA_ROOT).resolve()
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, mode='w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for folder_name in ASSET_FOLDERS:
+            folder = (media_root / folder_name).resolve()
+            if not folder.is_dir() or media_root not in folder.parents:
+                continue
+            for path in folder.rglob('*'):
+                resolved = path.resolve()
+                if path.is_file() and media_root in resolved.parents:
+                    archive.write(resolved, resolved.relative_to(media_root).as_posix())
+    return output.getvalue()
+
+
+def _asset_backup_name(database_filename):
+    if database_filename == LATEST_NAME:
+        return ASSETS_LATEST_NAME
+    if database_filename.startswith('db_') and database_filename.endswith('.sqlite3'):
+        stamp = database_filename[len('db_'):-len('.sqlite3')]
+        return f'customize_{stamp}.zip'
+    return None
+
+
+def _download_optional(dbx, path):
+    try:
+        _, response = dbx.files_download(path)
+        return response.content
+    except Exception as exc:
+        if 'not_found' in str(exc).lower():
+            return None
+        raise
+
+
+def _restore_customization_archive(content):
+    """Safely restores archived media files without deleting unrelated media."""
+    if content is None:
+        return False
+    media_root = Path(dj_settings.MEDIA_ROOT).resolve()
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            for item in archive.infolist():
+                if item.is_dir():
+                    continue
+                target = (media_root / item.filename).resolve()
+                if media_root not in target.parents:
+                    raise BackupError('Customization backup contains an unsafe file path.')
+                target.parent.mkdir(parents=True, exist_ok=True)
+                temporary = target.with_suffix(target.suffix + '.restoring')
+                temporary.write_bytes(archive.read(item))
+                temporary.replace(target)
+        return True
+    except BackupError:
+        raise
+    except (OSError, zipfile.BadZipFile) as exc:
+        raise BackupError(f'Could not restore customization images: {exc}')
+
+
 def create_backup(settings_obj):
-    """Uploads the current db.sqlite3 as a timestamped file, and refreshes
-    db_latest.sqlite3 alongside it. Returns the timestamped filename."""
+    """Uploads paired database and customization-image backups."""
     try:
         dbx = _client(settings_obj)
         _ensure_folder(dbx, BACKUP_ROOT)
@@ -61,8 +123,12 @@ def create_backup(settings_obj):
 
         stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'db_{stamp}.sqlite3'
+        asset_filename = f'customize_{stamp}.zip'
+        asset_data = _customization_archive()
         dbx.files_upload(data, f'{BACKUP_FOLDER}/{filename}', mode=dropbox.files.WriteMode.add)
         dbx.files_upload(data, f'{BACKUP_FOLDER}/{LATEST_NAME}', mode=dropbox.files.WriteMode.overwrite)
+        dbx.files_upload(asset_data, f'{BACKUP_FOLDER}/{asset_filename}', mode=dropbox.files.WriteMode.add)
+        dbx.files_upload(asset_data, f'{BACKUP_FOLDER}/{ASSETS_LATEST_NAME}', mode=dropbox.files.WriteMode.overwrite)
         return filename
     except BackupError:
         raise
@@ -86,7 +152,12 @@ def list_backups(settings_obj):
             res = dbx.files_list_folder_continue(res.cursor)
             entries.extend(res.entries)
 
-        files = [e for e in entries if isinstance(e, dropbox.files.FileMetadata) and e.name != LATEST_NAME]
+        files = [
+            e for e in entries
+            if isinstance(e, dropbox.files.FileMetadata)
+            and e.name.startswith('db_') and e.name.endswith('.sqlite3')
+            and e.name != LATEST_NAME
+        ]
         files.sort(key=lambda e: e.name, reverse=True)
         return files
     except BackupError:
@@ -96,7 +167,7 @@ def list_backups(settings_obj):
 
 
 def restore_backup(settings_obj, filename):
-    """Downloads the given backup and atomically overwrites the local db.sqlite3."""
+    """Restores the database and its paired customization-image archive."""
     if not filename or '/' in filename or '\\' in filename:
         raise BackupError('Invalid backup filename.')
 
@@ -104,6 +175,8 @@ def restore_backup(settings_obj, filename):
         dbx = _client(settings_obj)
         _, resp = dbx.files_download(f'{BACKUP_FOLDER}/{filename}')
         content = resp.content
+        asset_filename = _asset_backup_name(filename)
+        asset_content = _download_optional(dbx, f'{BACKUP_FOLDER}/{asset_filename}') if asset_filename else None
     except BackupError:
         raise
     except Exception as exc:
@@ -117,6 +190,7 @@ def restore_backup(settings_obj, filename):
     try:
         tmp_path.write_bytes(content)
         tmp_path.replace(path)
+        _restore_customization_archive(asset_content)
     except OSError as exc:
         raise BackupError(
             f'Could not write the restored database (it may be locked by the running server): {exc}'

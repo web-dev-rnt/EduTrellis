@@ -1,17 +1,62 @@
 {% extends "dashboard/base.html" %}
-{% block title %}PWA / Install App{% endblock %}
-{% block page_title %}PWA / Install App{% endblock %}
+{% block title %}Customize{% endblock %}
+{% block page_title %}Customize{% endblock %}
 
 {% block content %}
 <p class="backup-sub" style="color:var(--text);font-size:.88rem;margin:0 0 1.4rem">
-  Lets shoppers install the store as an app on their phone or desktop, straight from the browser.
-  Upload a square logo and turn it on — an "Install App" button then appears on the storefront automatically.
+  Control how EduTrellis links look when shared, the browser favicon, and the installable store app.
 </p>
 
 {% if saved %}<div class="save-msg"><i class="fas fa-circle-check"></i> Saved.</div>{% endif %}
 
 <form class="form-card" style="max-width:640px" method="post" enctype="multipart/form-data">
   {% csrf_token %}
+
+  <h3 style="margin:0 0 .35rem"><i class="fas fa-share-nodes"></i> Link sharing</h3>
+  <p class="help" style="margin:0 0 1.2rem">Used by WhatsApp, Facebook, Instagram, X and other services that generate a link preview. Product links continue to use that product's own title, description and image.</p>
+
+  <div class="form-group">
+    <label for="{{ form.share_title.id_for_label }}">Share heading</label>
+    {{ form.share_title }}
+    <div class="help">The main heading in a shared-link preview. Leave blank to use the website's default.</div>
+    {{ form.share_title.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.share_description.id_for_label }}">Share description</label>
+    {{ form.share_description }}
+    <div class="help">Keep this short and clear so messaging apps do not cut it off.</div>
+    {{ form.share_description.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.share_image.id_for_label }}">Share image</label>
+    {% if settings_obj and settings_obj.share_image %}
+      <div class="current-thumb">
+        <img src="{{ settings_obj.share_image.url }}" alt="Current share preview image">
+        <span class="help">Current preview image — upload a new one to replace it.</span>
+      </div>
+    {% endif %}
+    {{ form.share_image }}
+    <div class="help">Recommended: 1200×630px JPG, PNG or WebP.</div>
+    {{ form.share_image.errors }}
+  </div>
+
+  <div class="form-group">
+    <label for="{{ form.favicon.id_for_label }}">Favicon</label>
+    {% if settings_obj and settings_obj.favicon %}
+      <div class="current-thumb">
+        <img src="{{ settings_obj.favicon.url }}" alt="Current favicon">
+        <span class="help">Current favicon — upload a new one to replace it.</span>
+      </div>
+    {% endif %}
+    {{ form.favicon }}
+    <div class="help">Browser-tab icon. ICO, PNG, SVG or WebP are supported; a square image works best.</div>
+    {{ form.favicon.errors }}
+  </div>
+
+  <hr style="border:0;border-top:1px solid var(--line);margin:1.8rem 0">
+  <h3 style="margin:0 0 1rem"><i class="fas fa-mobile-screen-button"></i> Installable app</h3>
 
   <div class="toggle-row">
     <div><b>Show "Install App" on the storefront</b><span>Needs a logo uploaded below to actually take effect.</span></div>

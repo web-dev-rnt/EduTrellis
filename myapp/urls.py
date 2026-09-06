@@ -74,6 +74,7 @@ urlpatterns = [
     path('store/dashboard/email-settings/', views.dashboard_email_settings, name='dashboard_email_settings'),
     path('store/dashboard/email-settings/test/', views.dashboard_email_settings_test, name='dashboard_email_settings_test'),
     path('store/dashboard/pwa-settings/', views.dashboard_pwa_settings, name='dashboard_pwa_settings'),
+    path('store/dashboard/customize/', views.dashboard_pwa_settings, name='dashboard_customize'),
     path('store/dashboard/payments/', views.dashboard_payments, name='dashboard_payments'),
     path('store/dashboard/backup/', views.dashboard_backup, name='dashboard_backup'),
     path('store/dashboard/backup/settings/', views.dashboard_backup_settings, name='dashboard_backup_settings'),

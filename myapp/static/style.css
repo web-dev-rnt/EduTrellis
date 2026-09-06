@@ -265,7 +265,7 @@ nav ul li:last-child a:hover{background:var(--dark-red);color:#fff;transform:tra
   box-shadow:0 4px 20px rgba(232,0,30,.3);
   white-space:nowrap;
 }
-.slide-content h1{
+.slide-content h1,.slide-content h2{
   font-family:var(--font-head);
   font-size:clamp(1.9rem,4.5vw,3.8rem);
   font-weight:900;color:#fff;
@@ -274,8 +274,8 @@ nav ul li:last-child a:hover{background:var(--dark-red);color:#fff;transform:tra
   letter-spacing:-1.5px;
   max-width:860px;
 }
-.slide-content h1 em{color:#ff7a8c;font-style:normal;position:relative;display:inline-block}
-.slide-content h1 em::after{content:'';position:absolute;bottom:0px;left:0;right:0;height:3px;background:linear-gradient(90deg,#ff7a8c,transparent);border-radius:2px}
+.slide-content h1 em,.slide-content h2 em{color:#ff7a8c;font-style:normal;position:relative;display:inline-block}
+.slide-content h1 em::after,.slide-content h2 em::after{content:'';position:absolute;bottom:0px;left:0;right:0;height:3px;background:linear-gradient(90deg,#ff7a8c,transparent);border-radius:2px}
 .slide-content p{font-size:clamp(.9rem,1.8vw,1.18rem);color:rgba(210,228,255,.88);margin-bottom:1.8rem;font-weight:300;max-width:580px}
 .hero-btns{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;width:100%}
 .hero-stats{
@@ -1059,7 +1059,7 @@ footer::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;back
   nav{padding:0 1rem}
   .slider-wrap{height:calc(100svh - var(--offset));min-height:540px;}
   .slide-content{padding:1.5rem 1rem 5.5rem;}
-  .slide-content h1{font-size:clamp(1.6rem,6.5vw,2.4rem);letter-spacing:-.8px;margin-bottom:.75rem;}
+  .slide-content h1,.slide-content h2{font-size:clamp(1.6rem,6.5vw,2.4rem);letter-spacing:-.8px;margin-bottom:.75rem;}
   .slide-content p{font-size:.9rem;margin-bottom:1.3rem}
   .slide-badge{font-size:.63rem;padding:.33rem 1rem;margin-bottom:.9rem}
   .hero-btns{flex-direction:column;align-items:stretch;width:100%;max-width:300px;gap:.6rem;margin-bottom:1.3rem;}
@@ -1114,7 +1114,7 @@ footer::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;back
   :root{--strip-h:46px;--nav-h:52px}
   .strip-inner{padding:0 .5rem;gap:.3rem}
   .strip-link{font-size:.65rem}
-  .slide-content h1{font-size:1.5rem}
+  .slide-content h1,.slide-content h2{font-size:1.5rem}
   .hero-stats{max-width:300px}
   .hstat h3{font-size:.95rem}
   .hstat p{font-size:.53rem}

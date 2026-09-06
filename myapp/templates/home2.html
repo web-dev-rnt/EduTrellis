@@ -6,14 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- ===================== PRIMARY SEO META ===================== -->
-<title>Website Creation Services in India | Custom Website Design & Development – EduTrellis</title>
-<meta name="description" content="EduTrellis creates custom, fast & SEO-ready websites for businesses across India — from single-page business sites to full e-commerce stores and custom web apps. Get your free website quote today." />
+<title>{% if site_customization.share_title %}{{ site_customization.share_title }}{% else %}Website Creation Services in India | Custom Website Design & Development – EduTrellis{% endif %}</title>
+<meta name="description" content="{% if site_customization.share_description %}{{ site_customization.share_description }}{% else %}EduTrellis creates custom, fast & SEO-ready websites for businesses across India — from single-page business sites to full e-commerce stores and custom web apps. Get your free website quote today.{% endif %}" />
 <meta name="keywords" content="website creation services India, website design company India, website development agency India, custom website design Lucknow, e-commerce website development, WordPress website development, landing page design, website redesign services" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
 <meta name="author" content="EduTrellis" />
 <meta name="language" content="English" />
 <link rel="canonical" href="https://www.edutrellis.in/websitecreation/" />
-<link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}" />
+<link rel="icon" href="{% if site_customization.favicon %}{{ site_customization.favicon.url }}{% else %}{% static 'favicon.ico' %}{% endif %}" />
 
 <!-- ===================== LOCAL / GEO SEO ===================== -->
 <meta name="geo.region" content="IN-UP" />
@@ -24,19 +24,19 @@
 <!-- ===================== OPEN GRAPH (Facebook / LinkedIn / WhatsApp) ===================== -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="EduTrellis" />
-<meta property="og:title" content="Website Creation Services in India | EduTrellis" />
-<meta property="og:description" content="Custom website design & development — business sites, e-commerce stores, landing pages & custom web apps built for businesses across India. Get a free quote." />
+<meta property="og:title" content="{% if site_customization.share_title %}{{ site_customization.share_title }}{% else %}Website Creation Services in India | EduTrellis{% endif %}" />
+<meta property="og:description" content="{% if site_customization.share_description %}{{ site_customization.share_description }}{% else %}Custom website design & development — business sites, e-commerce stores, landing pages & custom web apps built for businesses across India. Get a free quote.{% endif %}" />
 <meta property="og:url" content="https://www.edutrellis.in/websitecreation/" />
-<meta property="og:image" content="https://www.edutrellis.in{% static 'img/og-cover.jpg' %}" />
+<meta property="og:image" content="{% if site_customization.share_image %}https://www.edutrellis.in{{ site_customization.share_image.url }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:locale" content="en_IN" />
 
 <!-- ===================== TWITTER CARD ===================== -->
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Website Creation Services in India | EduTrellis" />
-<meta name="twitter:description" content="Custom website design & development — business sites, e-commerce stores, landing pages & custom web apps built for businesses across India." />
-<meta name="twitter:image" content="https://www.edutrellis.in{% static 'img/og-cover.jpg' %}" />
+<meta name="twitter:title" content="{% if site_customization.share_title %}{{ site_customization.share_title }}{% else %}Website Creation Services in India | EduTrellis{% endif %}" />
+<meta name="twitter:description" content="{% if site_customization.share_description %}{{ site_customization.share_description }}{% else %}Custom website design & development — business sites, e-commerce stores, landing pages & custom web apps built for businesses across India.{% endif %}" />
+<meta name="twitter:image" content="{% if site_customization.share_image %}https://www.edutrellis.in{{ site_customization.share_image.url }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -127,11 +127,14 @@ def product_detail(request, slug):
 
 def product_reviews(request, slug):
     product = get_object_or_404(Product, slug=slug, is_active=True)
-    reviews = product.reviews.select_related('user').all()
+    reviews = product.displayed_reviews
     return JsonResponse({
         'status': 'ok',
         'can_review': _user_can_review(request.user, product),
-        'reviews': [_review_payload(r, request.user) for r in reviews],
+        'reviews': [
+            _review_payload(r, request.user, shared=r.product_id != product.pk)
+            for r in reviews
+        ],
     })
 
 
@@ -258,14 +261,15 @@ def _user_can_review(user, product):
     ).exists()
 
 
-def _review_payload(r, viewer=None):
+def _review_payload(r, viewer=None, shared=False):
     return {
         'id': r.pk,
         'name': r.user.first_name or 'Verified Buyer',
         'rating': r.rating,
         'comment': r.comment,
         'created_at': timezone.localtime(r.created_at).strftime('%d %b %Y'),
-        'mine': bool(viewer and viewer.is_authenticated and r.user_id == viewer.pk),
+        'mine': bool(not shared and viewer and viewer.is_authenticated and r.user_id == viewer.pk),
+        'shared': shared,
     }
 
 
@@ -1845,7 +1849,7 @@ def dashboard_pwa_settings(request):
         saved = True
         form = PWASettingsForm(instance=settings_obj)
     return render(request, 'dashboard/pwa_settings.html', {
-        'active': 'pwa_settings', 'form': form, 'settings_obj': settings_obj, 'saved': saved,
+        'active': 'customize', 'form': form, 'settings_obj': settings_obj, 'saved': saved,
     })
 
 

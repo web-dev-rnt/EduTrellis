@@ -429,8 +429,13 @@ class DropboxSettingsForm(forms.ModelForm):
 class PWASettingsForm(forms.ModelForm):
     class Meta:
         model = PWASettings
-        fields = ['is_enabled', 'app_name', 'short_name', 'description', 'icon', 'theme_color', 'background_color']
+        fields = [
+            'share_title', 'share_description', 'share_image', 'favicon',
+            'is_enabled', 'app_name', 'short_name', 'description', 'icon',
+            'theme_color', 'background_color',
+        ]
         widgets = {
+            'share_description': forms.Textarea(attrs={'rows': 3}),
             'description': forms.Textarea(attrs={'rows': 2}),
             'theme_color': forms.TextInput(attrs={'type': 'color'}),
             'background_color': forms.TextInput(attrs={'type': 'color'}),

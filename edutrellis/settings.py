@@ -63,6 +63,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'myapp.business_info.context_processor',
+                'myapp.site_context.context_processor',
             ],
         },
     },

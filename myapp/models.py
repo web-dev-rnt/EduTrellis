@@ -99,6 +99,10 @@ class Category(models.Model):
         return self.name
 
 
+AI_REVIEW_CATEGORY_SLUG = 'ai'
+AI_REVIEW_SOURCE_PRODUCT_SLUG = 'edutrellis-ai-monthly'
+
+
 class Product(models.Model):
     """A storefront product. Replaces the old hardcoded PRODUCTS array in
     estore.html with an admin-managed catalogue backed by the database."""
@@ -155,12 +159,33 @@ class Product(models.Model):
         return round((1 - float(self.price) / float(self.mrp)) * 100)
 
     @property
+    def displayed_reviews(self):
+        """Returns direct reviews plus the AI suite's shared feedback.
+
+        AI listings are plans and focused interfaces within the same product
+        family. Reuse the original EduTrellis AI feedback without cloning
+        users, reviews or purchase records. A direct review from the same
+        customer takes precedence over their shared suite review.
+        """
+        own_reviews = list(self.reviews.all())
+        if self.category.slug != AI_REVIEW_CATEGORY_SLUG or self.slug == AI_REVIEW_SOURCE_PRODUCT_SLUG:
+            return own_reviews
+
+        own_user_ids = {review.user_id for review in own_reviews}
+        shared_reviews = list(
+            Review.objects.filter(product__slug=AI_REVIEW_SOURCE_PRODUCT_SLUG)
+            .exclude(user_id__in=own_user_ids)
+            .select_related('user')
+        )
+        return sorted(own_reviews + shared_reviews, key=lambda review: review.created_at, reverse=True)
+
+    @property
     def review_stats(self):
         """Blends the manually-set `rating`/`reviews_count` (the store's
         starting/base figures) with real Review rows, so the displayed
         average updates honestly as genuine reviews come in instead of
         either ignoring them or discarding the base numbers outright."""
-        real = list(self.reviews.all())
+        real = self.displayed_reviews
         real_count = len(real)
         total_count = self.reviews_count + real_count
         if total_count == 0:
@@ -632,6 +657,10 @@ class PWASettings(models.Model):
     short_name        = models.CharField(max_length=40, default='EduTrellis', help_text='Short name shown under the home-screen icon.')
     description       = models.CharField(max_length=200, blank=True, default="Shop gadgets from EduTrellis — audio, wearables, charging and more.")
     icon              = models.ImageField(upload_to='pwa/', blank=True, null=True, help_text='Square logo, ideally 512×512px or larger — used as the installed app icon.')
+    share_title       = models.CharField(max_length=200, blank=True, default='', help_text='Heading shown when a website link is shared on WhatsApp, Facebook, X and other apps.')
+    share_description = models.CharField(max_length=300, blank=True, default='', help_text='Short description shown beneath the heading in shared-link previews.')
+    share_image       = models.ImageField(upload_to='customize/', blank=True, null=True, help_text='Link-preview image. Recommended size: 1200×630px.')
+    favicon           = models.FileField(upload_to='customize/', blank=True, null=True, help_text='Browser-tab icon. Upload an ICO, PNG, SVG or WebP file.')
     theme_color       = models.CharField(max_length=7, default='#e8001e', help_text='Hex color, e.g. #e8001e — used for the browser/app toolbar.')
     background_color  = models.CharField(max_length=7, default='#ffffff', help_text='Hex color shown behind the splash screen while the app loads.')
     updated_at        = models.DateTimeField(auto_now=True)

@@ -1,7 +1,7 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
-from myapp.models import Product
+from myapp.models import Product, PolicyPage
 
 DOMAIN = 'www.edutrellis.in'
 
@@ -67,3 +67,33 @@ class ProductSitemap(Sitemap):
 
     def lastmod(self, product):
         return product.updated_at
+
+
+class PolicySitemap(Sitemap):
+    protocol = 'https'
+    changefreq = 'monthly'
+    priority = 0.3
+
+    def get_urls(self, page=1, site=None, protocol=None):
+        protocol = self.protocol
+        return [
+            {
+                'item': item,
+                'location': 'https://{}{}'.format(DOMAIN, self.location(item)),
+                'lastmod': self.lastmod(item),
+                'changefreq': self.changefreq,
+                'priority': str(self.priority),
+                'alternates': [],
+                'x_default': None,
+            }
+            for item in self.paginator.page(page).object_list
+        ]
+
+    def items(self):
+        return PolicyPage.objects.all()
+
+    def location(self, policy):
+        return reverse('policy_page', kwargs={'key': policy.key})
+
+    def lastmod(self, policy):
+        return policy.updated_at

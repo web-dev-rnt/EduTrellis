@@ -4,8 +4,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>EduTrellis AI — Free AI Chat Assistant for Shopping &amp; Learning</title>
-<meta name="description" content="Chat with EduTrellis AI, a free assistant that helps you find products in the EduTrellis Store, answers questions and supports your learning — right from your browser.">
+<title>{% if site_customization.share_title %}{{ site_customization.share_title }}{% else %}EduTrellis AI — Free AI Chat Assistant for Shopping &amp; Learning{% endif %}</title>
+<meta name="description" content="{% if site_customization.share_description %}{{ site_customization.share_description }}{% else %}Chat with EduTrellis AI, a free assistant that helps you find products in the EduTrellis Store, answers questions and supports your learning — right from your browser.{% endif %}">
 <meta name="keywords" content="EduTrellis AI, AI chat assistant, free AI chatbot India, EduTrellis chatbot, AI shopping assistant, AI study help">
 <meta name="author" content="EduTrellis">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -13,18 +13,18 @@
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="EduTrellis">
-<meta property="og:title" content="EduTrellis AI — Free AI Chat Assistant">
-<meta property="og:description" content="Chat with EduTrellis AI for product help, quick answers and learning support — free, right from your browser.">
+<meta property="og:title" content="{% if site_customization.share_title %}{{ site_customization.share_title }}{% else %}EduTrellis AI — Free AI Chat Assistant{% endif %}">
+<meta property="og:description" content="{% if site_customization.share_description %}{{ site_customization.share_description }}{% else %}Chat with EduTrellis AI for product help, quick answers and learning support — free, right from your browser.{% endif %}">
 <meta property="og:url" content="https://www.edutrellis.in{{ request.path }}">
-<meta property="og:image" content="https://www.edutrellis.in{% static 'img/og-cover.jpg' %}">
+<meta property="og:image" content="{% if site_customization.share_image %}https://www.edutrellis.in{{ site_customization.share_image.url }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="en_IN">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="EduTrellis AI — Free AI Chat Assistant">
-<meta name="twitter:description" content="Chat with EduTrellis AI for product help, quick answers and learning support — free, right from your browser.">
-<meta name="twitter:image" content="https://www.edutrellis.in{% static 'img/og-cover.jpg' %}">
+<meta name="twitter:title" content="{% if site_customization.share_title %}{{ site_customization.share_title }}{% else %}EduTrellis AI — Free AI Chat Assistant{% endif %}">
+<meta name="twitter:description" content="{% if site_customization.share_description %}{{ site_customization.share_description }}{% else %}Chat with EduTrellis AI for product help, quick answers and learning support — free, right from your browser.{% endif %}">
+<meta name="twitter:image" content="{% if site_customization.share_image %}https://www.edutrellis.in{{ site_customization.share_image.url }}{% else %}https://www.edutrellis.in{% static 'img/og-cover.jpg' %}{% endif %}">
 <script>
 // Applied synchronously, before first paint, so a saved dark/light choice
 // takes effect immediately instead of flashing the other theme while the
@@ -36,7 +36,7 @@
   } catch (e) {}
 })();
 </script>
-<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+<link rel="icon" href="{% if site_customization.favicon %}{{ site_customization.favicon.url }}{% else %}{% static 'favicon.ico' %}{% endif %}">
 <link rel="manifest" href="{% url 'ai_manifest' %}">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

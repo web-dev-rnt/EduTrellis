@@ -10,7 +10,7 @@ from django.test import TestCase, override_settings
 
 from . import ai_chat, business_info, company_knowledge, doc_extract, privacy, request_router
 from .middleware import CanonicalHostMiddleware, PublicAssetCacheMiddleware
-from .models import AIConversation, AIMessage, AINote, Cart, Category, Product, StoreProfile
+from .models import AIConversation, AIMessage, AINote, Cart, Category, Product, PWASettings, StoreProfile
 from .views import AI_CURRENT_CONVERSATION_SESSION_KEY, _ai_document_instruction
 
 
@@ -87,6 +87,97 @@ class AIResponseReliabilityTests(TestCase):
         self.assertEqual(request_router.classify('Research the latest facts and sources'), 'research')
         self.assertEqual(request_router.classify('Hello, how are you?'), 'general')
         self.assertEqual(request_router.choose_model('Fix this JavaScript bug', 'quick')[0], 'code')
+        self.assertEqual(request_router.choose_chatgpt_worker('Hello, how are you?')[0], 'quick')
+        self.assertEqual(request_router.choose_chatgpt_worker('Write a Python function')[0], 'code')
+
+    def test_chatgpt_uses_worker_model_with_stable_truthful_identity(self):
+        chunk = SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='answer'))])
+        client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
+            create=Mock(return_value=iter([chunk])),
+        )))
+
+        with patch('myapp.ai_chat._get_client', return_value=client):
+            result = ''.join(ai_chat.stream_chat(
+                [{'role': 'user', 'content': 'Write a Python function'}],
+                model_key='code', identity_model_key=ai_chat.CHATGPT_56_MODEL_KEY,
+            ))
+
+        self.assertEqual(result, 'answer')
+        request = client.chat.completions.create.call_args.kwargs
+        self.assertEqual(request['model'], ai_chat.MODELS['code']['id'])
+        self.assertEqual(request['messages'][0]['role'], 'system')
+        self.assertIn('ChatGPT 5.6 in EduTrellis AI', request['messages'][0]['content'])
+        self.assertIn('not the official OpenAI gpt-5.6 API', request['messages'][0]['content'])
+
+    def test_chatgpt_is_the_fresh_default_for_staff_on_every_page_load(self):
+        user = User.objects.create_user(
+            username='staff-fresh-default@example.com', password='test-password-123', is_staff=True,
+        )
+        self.client.force_login(user)
+        response = self.client.get('/AI/')
+
+        self.assertEqual(ai_chat.DEFAULT_MODEL_KEY, ai_chat.CHATGPT_56_MODEL_KEY)
+        self.assertEqual(response.context['ai_default_model'], ai_chat.CHATGPT_56_MODEL_KEY)
+        self.assertEqual(response.context['ai_default_model_label'], 'ChatGPT 5.6')
+        self.assertNotContains(response, "localStorage.getItem('ai_model')")
+        self.assertNotContains(response, "localStorage.setItem('ai_model'")
+
+    def test_guest_defaults_to_quick_and_only_sees_free_tier_models(self):
+        # Guests and free (unsubscribed, non-staff) accounts are restricted
+        # to the cheap models — ChatGPT 5.6/Ultra/Nemotron Super are staff-only.
+        response = self.client.get('/AI/')
+
+        self.assertEqual(response.context['ai_default_model'], 'quick')
+        self.assertEqual(response.context['ai_default_model_label'], 'EduTrellis Quick')
+        self.assertEqual(
+            {m['key'] for m in response.context['ai_models']},
+            {'quick', 'light', 'code'},
+        )
+
+    def test_free_account_model_request_is_downgraded_server_side(self):
+        # Even if a stale/tampered client asks for a restricted model, the
+        # backend clamps it rather than trusting the payload.
+        user = User.objects.create_user(username='free-model-clamp@example.com', password='test-password-123')
+        self.client.force_login(user)
+
+        with patch('myapp.views.ai_chat.stream_chat', side_effect=lambda *args, **kwargs: iter(['reply'])):
+            with patch('myapp.views.light_mode.save_from_chat'):
+                response = self.client.post(
+                    '/AI/api/send/',
+                    data=json.dumps({'model': 'ultra', 'message': 'Hello there'}),
+                    content_type='application/json',
+                )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['X-Model-Key'], 'quick')
+
+    def test_chatgpt_routes_general_code_and_image_turns(self):
+        user = User.objects.create_user(
+            username='chatgpt-router@example.com', password='test-password-123', is_staff=True,
+        )
+        self.client.force_login(user)
+
+        with patch('myapp.views.ai_chat.stream_chat', side_effect=lambda *args, **kwargs: iter(['reply'])) as stream_chat:
+            with patch('myapp.views.light_mode.save_from_chat'):
+                with patch('myapp.views.image_ocr.extract_data_uri', return_value=''):
+                    cases = (
+                        ({'message': 'Hello there'}, 'quick', 'general'),
+                        ({'message': 'Debug this Python function'}, 'code', 'code'),
+                        ({'message': 'What is in this?', 'image': 'data:image/png;base64,AA=='}, 'vision', 'image'),
+                    )
+                    for extra_payload, worker_key, category in cases:
+                        payload = {'model': ai_chat.CHATGPT_56_MODEL_KEY, **extra_payload}
+                        response = self.client.post(
+                            '/AI/api/send/', data=json.dumps(payload), content_type='application/json',
+                        )
+                        self.assertEqual(response.status_code, 200)
+                        self.assertEqual(b''.join(response.streaming_content).decode(), 'reply')
+                        self.assertEqual(response['X-Model-Key'], ai_chat.CHATGPT_56_MODEL_KEY)
+                        self.assertEqual(response['X-Routed-Model-Key'], worker_key)
+                        self.assertEqual(response['X-Request-Category'], category)
+                        call = stream_chat.call_args
+                        self.assertEqual(call.kwargs['model_key'], worker_key)
+                        self.assertEqual(call.kwargs['identity_model_key'], ai_chat.CHATGPT_56_MODEL_KEY)
 
     def test_accuracy_rules_cover_maths_and_unclear_images(self):
         self.assertTrue(ai_chat.is_math_request('Solve 2x + 5 = 17'))
@@ -223,7 +314,7 @@ class AIResponseReliabilityTests(TestCase):
 
         self.assertEqual(redacted, 'Email <EMAIL> or call <PHONE>')
 
-    def test_default_model_falls_back_to_quick_before_showing_an_error(self):
+    def test_default_model_retries_on_quick_backend(self):
         chunk = SimpleNamespace(
             choices=[SimpleNamespace(delta=SimpleNamespace(content='Recovered reply'))]
         )
@@ -373,6 +464,52 @@ class AINoteCRUDTests(TestCase):
 
 
 class PublicPagePerformanceAndSEOTests(TestCase):
+    def test_customize_settings_drive_share_metadata_and_favicon(self):
+        customization = PWASettings.get_solo()
+        customization.share_title = 'Custom sharing heading'
+        customization.share_description = 'Custom sharing description.'
+        customization.share_image.name = 'customize/share-card.png'
+        customization.favicon.name = 'customize/favicon.ico'
+        customization.save()
+
+        response = self.client.get('/store/')
+
+        self.assertContains(response, '<meta property="og:title" content="Custom sharing heading">', html=True)
+        self.assertContains(response, '<meta property="og:description" content="Custom sharing description.">', html=True)
+        self.assertContains(response, 'https://www.edutrellis.in/media/customize/share-card.png')
+        self.assertContains(response, '<link rel="icon" href="/media/customize/favicon.ico">', html=True)
+
+    def test_product_share_metadata_takes_priority_over_store_defaults(self):
+        customization = PWASettings.get_solo()
+        customization.share_title = 'Store sharing heading'
+        customization.share_description = 'Store sharing description.'
+        customization.save()
+        category = Category.objects.create(name='Share Test', slug='share-test')
+        product = Product.objects.create(
+            category=category, slug='share-test-product', brand='EduTrellis',
+            name='Dynamic Product', short_description='Dynamic product description.',
+            price='99.00', mrp='99.00', is_active=True,
+        )
+
+        response = self.client.get(f'/store/product/{product.slug}/')
+
+        self.assertContains(response, '<meta property="og:title" content="Dynamic Product — EduTrellis Store">', html=True)
+        self.assertContains(response, '<meta property="og:description" content="Dynamic product description.">', html=True)
+
+    def test_customize_dashboard_exposes_share_and_favicon_fields(self):
+        admin = User.objects.create_user(
+            username='customize-admin@example.com', password='test-password-123', is_staff=True,
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get('/store/dashboard/customize/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="share_title"')
+        self.assertContains(response, 'name="share_description"')
+        self.assertContains(response, 'name="share_image"')
+        self.assertContains(response, 'name="favicon"')
+
     def test_apex_domain_redirects_permanently_to_canonical_www_host(self):
         middleware = CanonicalHostMiddleware(lambda request: HttpResponse('page'))
 
