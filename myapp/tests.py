@@ -251,6 +251,18 @@ class SiteSwitchTests(TestCase):
         self.assertFalse(SiteStatus.objects.filter(ai_disabled=True).exists())
 
 
+class RailwayHealthcheckTests(TestCase):
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_health_check_gets_200_over_plain_http(self):
+        for path in ('/', '/store/', '/health'):
+            response = self.client.get(path, HTTP_HOST='healthcheck.railway.app')
+            self.assertEqual(response.status_code, 200, path)
+
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_other_plain_http_still_redirects(self):
+        self.assertEqual(self.client.get('/store/', HTTP_HOST='www.edutrellis.in').status_code, 301)
+
+
 class MediaRedirectTests(TestCase):
     def test_redirects_to_dropbox(self):
         from unittest import mock

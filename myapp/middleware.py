@@ -6,6 +6,24 @@ from django.http import HttpResponsePermanentRedirect, JsonResponse
 from django.shortcuts import render
 
 
+class RailwayHealthcheckMiddleware:
+    """Railway's deploy health check calls the app over plain HTTP with the
+    host healthcheck.railway.app. It must get a 200, not ALLOWED_HOSTS' 400
+    or the HTTPS redirect's 301, or a deploy never goes live. First in
+    MIDDLEWARE, so it answers before either of those runs."""
+
+    HOST = 'healthcheck.railway.app'
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.META.get('HTTP_HOST', '').partition(':')[0].lower() == self.HOST:
+            from django.http import HttpResponse
+            return HttpResponse('ok', content_type='text/plain')
+        return self.get_response(request)
+
+
 class CanonicalHostMiddleware:
     """Consolidate the bare domain onto the canonical www hostname."""
 

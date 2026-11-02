@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'myapp.middleware.RailwayHealthcheckMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'myapp.middleware.CanonicalHostMiddleware',
     'myapp.middleware.SiteSwitchMiddleware',
